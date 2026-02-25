@@ -81,15 +81,29 @@ export const listProducts = query({
     lowStockOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, { includeArchived, type, brand, lowStockOnly }) => {
-    let products = await ctx.db
+    const indexedProducts = await ctx.db
       .query("products")
       .withIndex("by_isArchived_createdAt", (q) =>
         includeArchived
-          ? q.gte("isArchived", false)  // all: false then true
+          ? q.gte("isArchived", false) // all: false then true
           : q.eq("isArchived", false)
       )
       .order("desc")
       .collect();
+
+    // Compatibility: legacy rows created before isArchived existed may be absent from this index.
+    const legacyProducts = (await ctx.db.query("products").collect())
+      .filter((p) => (p as { isArchived?: boolean }).isArchived === undefined)
+      .map((p) => ({ ...p, isArchived: false }));
+
+    const merged = [...indexedProducts, ...legacyProducts];
+    const deduped = Array.from(
+      new Map(merged.map((p) => [p._id, p])).values(),
+    ).sort((a, b) => b.createdAt - a.createdAt);
+
+    let products = includeArchived
+      ? deduped
+      : deduped.filter((p) => p.isArchived === false);
 
     if (type) products = products.filter((p) => p.type === type);
     if (brand) products = products.filter((p) => p.brand === brand);
