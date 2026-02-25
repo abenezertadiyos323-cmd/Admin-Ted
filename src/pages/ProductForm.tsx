@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation } from 'convex/react';
 import { Camera, Archive, RotateCcw, ChevronDown } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { getProductById, createProduct, updateProduct, archiveProduct, restoreProduct } from '../lib/api';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { getTelegramUser } from '../lib/telegram';
+import { processImage } from '../lib/imageProcessor';
 import { formatETB, getStockStatus } from '../lib/utils';
-import type { Product, Brand, Condition, ProductType } from '../types';
+import type { Brand, Condition, ProductType } from '../types';
 
 const BRANDS: Brand[] = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Other'];
 const CONDITIONS: Condition[] = ['Excellent', 'Good', 'Fair', 'Poor'];
@@ -30,6 +33,12 @@ interface FormData {
   description: string;
 }
 
+interface PendingImage {
+  blob: Blob;   // processed blob (resized + compressed)
+  order: number;
+  preview: string; // ObjectURL from the processed blob
+}
+
 export default function ProductForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -37,9 +46,7 @@ export default function ProductForm() {
   const isEdit = Boolean(id);
   const defaultType = (searchParams.get('type') as ProductType) || 'phone';
 
-  const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [product, setProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<FormData>({
     type: defaultType,
     brand: 'iPhone',
@@ -53,32 +60,81 @@ export default function ProductForm() {
     description: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const formPopulated = useRef(false);
 
   const user = getTelegramUser();
 
+  // ---- Convex: load existing product (edit mode only) ----
+  const existingProduct = useQuery(
+    api.products.getProductById,
+    isEdit && id ? { productId: id as Id<'products'> } : 'skip',
+  );
+  const loading = isEdit && existingProduct === undefined;
+
+  // Populate form once when the query first returns a result
   useEffect(() => {
-    if (isEdit && id) {
-      getProductById(id).then((p) => {
-        if (p) {
-          setProduct(p);
-          setForm({
-            type: p.type,
-            brand: p.brand,
-            model: p.model,
-            ram: p.ram ?? '',
-            storage: p.storage ?? '',
-            condition: p.condition ?? '',
-            price: String(p.price),
-            stockQuantity: String(p.stockQuantity),
-            exchangeEnabled: p.exchangeEnabled,
-            description: p.description ?? '',
-          });
-        }
-        setLoading(false);
+    if (existingProduct && !formPopulated.current) {
+      formPopulated.current = true;
+      setForm({
+        type: existingProduct.type,
+        brand: existingProduct.brand,
+        model: existingProduct.model,
+        ram: existingProduct.ram ?? '',
+        storage: existingProduct.storage ?? '',
+        condition: existingProduct.condition ?? '',
+        price: String(existingProduct.price),
+        stockQuantity: String(existingProduct.stockQuantity),
+        exchangeEnabled: existingProduct.exchangeEnabled,
+        description: existingProduct.description ?? '',
       });
     }
-  }, [id, isEdit]);
+  }, [existingProduct]);
 
+  // ---- Convex mutations ----
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const createProductMutation = useMutation(api.products.createProduct);
+  const updateProductMutation = useMutation(api.products.updateProduct);
+  const archiveProductMutation = useMutation(api.products.archiveProduct);
+  const restoreProductMutation = useMutation(api.products.restoreProduct);
+
+  // ---- Image picker ----
+  const handleSlotPress = (slot: number) => {
+    setPickerSlot(slot);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || pickerSlot === null) return;
+    e.target.value = '';
+    const slot = pickerSlot; // capture before async
+    const { blob, previewUrl } = await processImage(file, 1200, 0.8);
+    setPendingImages((prev) => [
+      ...prev.filter((img) => img.order !== slot),
+      { blob, order: slot, preview: previewUrl },
+    ]);
+  };
+
+  // Upload all pending (already-processed) images to Convex Storage
+  const uploadPendingImages = async (): Promise<Array<{ storageId: Id<'_storage'>; order: number }>> => {
+    const results: Array<{ storageId: Id<'_storage'>; order: number }> = [];
+    for (const pending of pendingImages) {
+      const uploadUrl = await generateUploadUrl({});
+      const resp = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': pending.blob.type },
+        body: pending.blob,
+      });
+      const { storageId } = (await resp.json()) as { storageId: string };
+      results.push({ storageId: storageId as Id<'_storage'>, order: pending.order });
+    }
+    return results;
+  };
+
+  // ---- Validation ----
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!form.model.trim()) newErrors.model = 'Model is required';
@@ -90,11 +146,23 @@ export default function ProductForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ---- Save: upload images then create / update product ----
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
     try {
-      const data = {
+      // 1. Upload any newly-selected images to Convex Storage
+      const uploaded = await uploadPendingImages();
+
+      // 2. Retain existing stored images for any slots that weren't replaced
+      const replacedOrders = new Set(uploaded.map((img) => img.order));
+      const kept = (existingProduct?.images ?? [])
+        .filter((img) => !replacedOrders.has(img.order))
+        .map((img) => ({ storageId: img.storageId as Id<'_storage'>, order: img.order }));
+
+      const allImages = [...kept, ...uploaded];
+
+      const common = {
         type: form.type,
         brand: form.brand,
         model: form.model.trim(),
@@ -105,15 +173,14 @@ export default function ProductForm() {
         stockQuantity: Number(form.stockQuantity),
         exchangeEnabled: form.exchangeEnabled,
         description: form.description || undefined,
-        images: product?.images ?? [],
-        createdBy: String(user.id),
+        images: allImages,
         updatedBy: String(user.id),
       };
 
       if (isEdit && id) {
-        await updateProduct(id, data);
+        await updateProductMutation({ productId: id as Id<'products'>, ...common });
       } else {
-        await createProduct(data);
+        await createProductMutation({ ...common, createdBy: String(user.id) });
       }
       navigate('/inventory');
     } catch (err) {
@@ -126,14 +193,14 @@ export default function ProductForm() {
   const handleArchive = async () => {
     if (!id) return;
     setSaving(true);
-    await archiveProduct(id);
+    await archiveProductMutation({ productId: id as Id<'products'> });
     navigate('/inventory');
   };
 
   const handleRestore = async () => {
     if (!id) return;
     setSaving(true);
-    await restoreProduct(id);
+    await restoreProductMutation({ productId: id as Id<'products'> });
     navigate('/inventory');
   };
 
@@ -170,34 +237,48 @@ export default function ProductForm() {
       />
 
       <div className="px-4 py-4 space-y-4 pb-8">
-        {/* Image Upload Placeholder */}
+        {/* Image Upload — backed by Convex Storage */}
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Photos (up to 3)</p>
+
+          {/* Hidden native file picker — opened programmatically per slot */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+
           <div className="flex gap-3">
             {[1, 2, 3].map((n) => {
-              const img = product?.images?.find((i) => i.order === n);
+              const pending = pendingImages.find((img) => img.order === n);
+              const existing = existingProduct?.images?.find((img) => img.order === n);
+              const displayUrl = pending?.preview ?? existing?.url;
               return (
-                <div
+                <button
                   key={n}
-                  className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden relative"
+                  type="button"
+                  onClick={() => handleSlotPress(n)}
+                  className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden relative active:scale-95 transition-transform"
                 >
-                  {img ? (
-                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  {displayUrl ? (
+                    <img src={displayUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <Camera size={20} className="text-gray-300" />
                   )}
-                </div>
+                </button>
               );
             })}
           </div>
-          <p className="text-[11px] text-gray-400 mt-2">Image upload connects to Convex Storage</p>
+          <p className="text-[11px] text-gray-400 mt-2">Tap a slot to pick an image (max 3)</p>
         </div>
 
         {/* Basic Info */}
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Basic Info</p>
 
-          {/* Type (only for new) */}
+          {/* Type (new products only) */}
           {!isEdit && (
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1.5 block">Type</label>
@@ -383,10 +464,10 @@ export default function ProductForm() {
         </div>
 
         {/* Archive / Restore (Edit only) */}
-        {isEdit && product && (
+        {isEdit && existingProduct && (
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Danger Zone</p>
-            {product.archivedAt ? (
+            {existingProduct.archivedAt ? (
               <button
                 onClick={handleRestore}
                 disabled={saving}
@@ -406,7 +487,7 @@ export default function ProductForm() {
               </button>
             )}
             <p className="text-[11px] text-gray-400 mt-2 text-center">
-              {product.archivedAt
+              {existingProduct.archivedAt
                 ? 'Restore to make product visible again'
                 : 'Archived products are hidden from customers. Auto-deleted after 30 days.'}
             </p>

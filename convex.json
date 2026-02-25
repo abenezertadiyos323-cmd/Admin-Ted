@@ -1,0 +1,4 @@
+{
+  "authPath": "auth.config.js",
+  "functions": "convex"
+}

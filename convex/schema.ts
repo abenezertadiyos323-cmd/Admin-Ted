@@ -97,10 +97,11 @@ export default defineSchema({
 
     images: v.array(v.object({
       storageId: v.id("_storage"),
-      url: v.string(),
+      // url is NOT stored — resolved at query time via ctx.storage.getUrl()
       order: v.number(),
     })),
 
+    isArchived: v.boolean(),
     archivedAt: v.optional(v.number()),
 
     createdAt: v.number(),
@@ -111,6 +112,7 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_brand", ["brand"])
     .index("by_type_and_brand", ["type", "brand"])
+    .index("by_isArchived_createdAt", ["isArchived", "createdAt"])
     .index("by_archivedAt_and_stockQuantity", ["archivedAt", "stockQuantity"])
     .index("by_archivedAt", ["archivedAt"])
     .index("by_exchangeEnabled", ["exchangeEnabled"])

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from 'convex/react';
 import { Search } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
-import { getProducts } from '../lib/api';
+import { api } from '../../convex/_generated/api';
 import type { Product, Brand, ProductType } from '../types';
 import { Package } from 'lucide-react';
 
@@ -22,16 +23,11 @@ export default function Inventory() {
   const [activeType, setActiveType] = useState<ProductType>('phone');
   const [activeBrand, setActiveBrand] = useState<Brand | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    getProducts({ type: activeType }).then((data) => {
-      setProducts(data);
-      setLoading(false);
-    });
-  }, [activeType]);
+  // ---- Convex real-time query (replaces mock useEffect/setState) ----
+  const convexProducts = useQuery(api.products.listProducts, { type: activeType });
+  const loading = convexProducts === undefined;
+  const products = (convexProducts ?? []) as Product[];
 
   const filteredProducts = products.filter((p) => {
     const matchesBrand =
