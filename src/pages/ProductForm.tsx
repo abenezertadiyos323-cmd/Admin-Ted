@@ -12,10 +12,12 @@ import { formatETB, getStockStatus } from '../lib/utils';
 import type { Brand, Condition, ProductType } from '../types';
 
 const BRANDS: Brand[] = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Other'];
-const CONDITIONS: Condition[] = ['Excellent', 'Good', 'Fair', 'Poor'];
+const CONDITIONS: Condition[] = ['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor'];
 const CONDITION_DESCRIPTIONS: Record<Condition, string> = {
-  Excellent: 'Like new, no scratches',
-  Good: 'Minor wear, fully functional',
+  New: 'Sealed box, never used',
+  'Like New': 'Opened but mint, no marks',
+  Excellent: 'Barely used, minimal wear',
+  Good: 'Light wear, fully functional',
   Fair: 'Visible wear, all features work',
   Poor: 'Heavy wear or minor issues',
 };
@@ -240,18 +242,9 @@ export default function ProductForm() {
       <PageHeader
         title={isEdit ? 'Edit Product' : `Add ${defaultType === 'phone' ? 'Phone' : 'Accessory'}`}
         showBack
-        rightAction={
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        }
       />
 
-      <div className="px-4 py-4 space-y-4 pb-8">
+      <div className="px-4 py-4 space-y-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
         {/* Image Upload — backed by Convex Storage */}
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Photos (up to 3)</p>
@@ -443,24 +436,38 @@ export default function ProductForm() {
             </div>
           </div>
 
-          {/* Exchange Toggle */}
-          <div className="flex items-center justify-between py-1">
-            <div>
-              <p className="text-sm font-medium text-gray-800">Exchange Available</p>
-              <p className="text-xs text-gray-400">Allow customers to trade-in for this phone</p>
-            </div>
-            <button
-              onClick={() => update('exchangeEnabled', !form.exchangeEnabled)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${
-                form.exchangeEnabled ? 'bg-green-500' : 'bg-gray-200'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  form.exchangeEnabled ? 'translate-x-6' : 'translate-x-0.5'
+          {/* Exchange Available — segmented pill toggle */}
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-2">Exchange Available</p>
+            <div className="flex rounded-2xl border border-gray-200 bg-gray-100 p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => update('exchangeEnabled', false)}
+                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                  !form.exchangeEnabled
+                    ? 'bg-red-500 text-white shadow-sm'
+                    : 'text-gray-400'
                 }`}
-              />
-            </button>
+              >
+                Exchange OFF
+              </button>
+              <button
+                type="button"
+                onClick={() => update('exchangeEnabled', true)}
+                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                  form.exchangeEnabled
+                    ? 'bg-green-500 text-white shadow-sm'
+                    : 'text-gray-400'
+                }`}
+              >
+                Exchange ON
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1.5 px-0.5">
+              {form.exchangeEnabled
+                ? '✓ Customers can submit trade-in requests for this phone'
+                : 'This phone is not available for exchange or trade-in'}
+            </p>
           </div>
         </div>
 
@@ -477,6 +484,16 @@ export default function ProductForm() {
             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
+
+        {/* Primary Save button — full width, below Description */}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-4 rounded-2xl bg-blue-600 text-white text-base font-bold active:scale-[0.97] transition-transform disabled:opacity-50 shadow-sm"
+        >
+          {saving ? 'Saving…' : isEdit ? 'Save Changes' : `Add ${form.type === 'phone' ? 'Phone' : 'Accessory'}`}
+        </button>
 
         {/* Archive / Restore (Edit only) */}
         {isEdit && existingProduct && (

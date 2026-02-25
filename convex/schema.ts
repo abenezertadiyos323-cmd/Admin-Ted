@@ -24,6 +24,8 @@ const Brand = v.union(
 );
 
 const Condition = v.union(
+  v.literal("New"),
+  v.literal("Like New"),
   v.literal("Excellent"),
   v.literal("Good"),
   v.literal("Fair"),

@@ -30,3 +30,7 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Safe-area helpers — used by PageHeader and full-screen pages */
+.pt-safe-top  { padding-top:    env(safe-area-inset-top,    0px); }
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }

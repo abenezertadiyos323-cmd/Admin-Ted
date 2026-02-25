@@ -15,7 +15,7 @@ export type Brand =
   | 'Oppo'
   | 'Other';
 
-export type Condition = 'Excellent' | 'Good' | 'Fair' | 'Poor';
+export type Condition = 'New' | 'Like New' | 'Excellent' | 'Good' | 'Fair' | 'Poor';
 
 export type ThreadStatus = 'new' | 'seen' | 'done';
 
