@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from 'convex/react';
-import { Search } from 'lucide-react';
+import { useMutation, useQuery } from 'convex/react';
+import { Package, Search } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import type { Product, Brand, ProductType } from '../types';
-import { Package } from 'lucide-react';
 
 const BRANDS: Brand[] = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Other'];
 const PRODUCT_TABS: { key: ProductType; label: string }[] = [
@@ -23,6 +23,10 @@ export default function Inventory() {
   const [activeType, setActiveType] = useState<ProductType>('phone');
   const [activeBrand, setActiveBrand] = useState<Brand | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmDecrementProduct, setConfirmDecrementProduct] = useState<Product | null>(null);
+  const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
+
+  const updateStockQuantity = useMutation(api.products.updateStockQuantity);
 
   // ---- Convex real-time query (replaces mock useEffect/setState) ----
   const convexProducts = useQuery(api.products.listProducts, { type: activeType });
@@ -45,6 +49,45 @@ export default function Inventory() {
 
     return matchesBrand && matchesSearch && matchesLowStock;
   });
+
+  const setProductPending = (productId: string, pending: boolean) => {
+    setPendingProductIds((prev) => {
+      const next = new Set(prev);
+      if (pending) {
+        next.add(productId);
+      } else {
+        next.delete(productId);
+      }
+      return next;
+    });
+  };
+
+  const updateProductStock = async (productId: string, delta: 1 | -1) => {
+    setProductPending(productId, true);
+    try {
+      await updateStockQuantity({ productId: productId as Id<'products'>, delta });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProductPending(productId, false);
+    }
+  };
+
+  const handleIncrement = (product: Product) => {
+    void updateProductStock(product._id, 1);
+  };
+
+  const handleDecrementRequest = (product: Product) => {
+    if (product.stockQuantity === 0) return;
+    setConfirmDecrementProduct(product);
+  };
+
+  const handleConfirmDecrement = () => {
+    if (!confirmDecrementProduct) return;
+    const productId = confirmDecrementProduct._id;
+    setConfirmDecrementProduct(null);
+    void updateProductStock(productId, -1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -141,15 +184,66 @@ export default function Inventory() {
               {isLowStock ? ' · Low stock' : ''}
             </p>
             {filteredProducts.map((product) => (
-              <ProductCard
-                key={product._id}
-                product={product}
-                onClick={() => navigate(`/inventory/${product._id}`)}
-              />
+              <div key={product._id} className="space-y-1">
+                <ProductCard
+                  product={product}
+                  onClick={() => navigate(`/inventory/${product._id}`)}
+                />
+                <div className="flex items-center justify-end gap-2 px-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDecrementRequest(product)}
+                    disabled={product.stockQuantity === 0 || pendingProductIds.has(product._id)}
+                    className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                  >
+                    -
+                  </button>
+                  <span className="w-7 text-center text-sm font-semibold text-gray-700">
+                    {product.stockQuantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleIncrement(product)}
+                    disabled={pendingProductIds.has(product._id)}
+                    className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
+
+      {confirmDecrementProduct && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40">
+          <div className="bg-white rounded-t-3xl w-full p-5 pb-8 animate-in slide-in-from-bottom duration-200">
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+            <h2 className="text-base font-bold text-gray-900 mb-1">Confirm stock decrease</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              {`${confirmDecrementProduct.brand} ${confirmDecrementProduct.model}: ${confirmDecrementProduct.stockQuantity} → ${Math.max(0, confirmDecrementProduct.stockQuantity - 1)}`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDecrementProduct(null)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm active:scale-95 transition-transform"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDecrement}
+                disabled={pendingProductIds.has(confirmDecrementProduct._id)}
+                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

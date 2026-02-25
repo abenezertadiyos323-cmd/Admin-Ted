@@ -197,6 +197,33 @@ export const updateProduct = mutation({
 });
 
 /**
+ * Quickly adjust stock by +1 or -1 from Inventory controls.
+ */
+export const updateStockQuantity = mutation({
+  args: {
+    productId: v.id("products"),
+    delta: v.number(),
+  },
+  handler: async (ctx, { productId, delta }) => {
+    if (delta !== 1 && delta !== -1) {
+      throw new Error("delta must be exactly 1 or -1");
+    }
+
+    const product = await ctx.db.get(productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    const newQty = Math.max(0, product.stockQuantity + delta);
+    await ctx.db.patch(productId, {
+      stockQuantity: newQty,
+    });
+
+    return { stockQuantity: newQty };
+  },
+});
+
+/**
  * Soft-delete a product: sets isArchived=true (for index) and archivedAt (for display).
  */
 export const archiveProduct = mutation({
