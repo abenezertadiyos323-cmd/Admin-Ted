@@ -47,14 +47,9 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
 export async function getProducts(filters?: {
   type?: ProductType;
   brand?: Brand;
-  includeArchived?: boolean;
 }): Promise<Product[]> {
   await delay();
-  let products = [...mockProducts];
-
-  if (!filters?.includeArchived) {
-    products = products.filter((p) => !p.archivedAt);
-  }
+  let products = mockProducts.filter((p) => !p.archivedAt);
   if (filters?.type) {
     products = products.filter((p) => p.type === filters.type);
   }
