@@ -218,7 +218,7 @@ export default function Inventory() {
 
       {confirmDecrementProduct && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40">
-          <div className="bg-white rounded-t-3xl w-full p-5 pb-8 animate-in slide-in-from-bottom duration-200">
+          <div className="bg-white rounded-t-3xl w-full p-5 animate-in slide-in-from-bottom duration-200" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}>
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
             <h2 className="text-base font-bold text-gray-900 mb-1">Confirm stock decrease</h2>
             <p className="text-xs text-gray-500 mb-4">
