@@ -217,6 +217,21 @@ export default function ProductForm() {
     );
   }
 
+  if (isEdit && existingProduct === null) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-3 px-6 text-center">
+        <p className="text-gray-700 font-semibold">Product not found</p>
+        <p className="text-gray-400 text-sm">This product may have been deleted.</p>
+        <button
+          onClick={() => navigate('/inventory')}
+          className="mt-2 text-blue-600 text-sm font-semibold active:scale-95 transition-transform"
+        >
+          ← Back to Inventory
+        </button>
+      </div>
+    );
+  }
+
   const isPhone = form.type === 'phone';
   const stockStatus = getStockStatus(Number(form.stockQuantity) || 0);
 
