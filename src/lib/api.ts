@@ -11,7 +11,6 @@ import type {
   InventoryEvent,
   DashboardStats,
   RecentActivity,
-  Brand,
   ProductType,
   ThreadCategory,
   ExchangeStatus,
@@ -46,18 +45,11 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
 
 export async function getProducts(filters?: {
   type?: ProductType;
-  brand?: Brand;
 }): Promise<Product[]> {
   await delay();
   let products = mockProducts.filter((p) => !p.archivedAt);
   if (filters?.type) {
     products = products.filter((p) => p.type === filters.type);
-  }
-  if (filters?.brand && filters.brand !== 'Other') {
-    products = products.filter((p) => p.brand === filters.brand);
-  } else if (filters?.brand === 'Other') {
-    const mainBrands = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo'];
-    products = products.filter((p) => !mainBrands.includes(p.brand));
   }
 
   return products;

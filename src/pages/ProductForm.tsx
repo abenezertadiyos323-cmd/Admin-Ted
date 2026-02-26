@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
-import { Camera, Archive, RotateCcw, ChevronDown } from 'lucide-react';
+import { Camera, Archive, RotateCcw } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { api } from '../../convex/_generated/api';
@@ -9,9 +9,9 @@ import type { Id } from '../../convex/_generated/dataModel';
 import { getTelegramUser } from '../lib/telegram';
 import { processImage } from '../lib/imageProcessor';
 import { formatETB, getStockStatus } from '../lib/utils';
-import type { Brand, Condition, ProductType } from '../types';
+import { normalizePhoneType, validatePhoneType } from '../lib/phoneTypeUtils';
+import type { Condition, ProductType } from '../types';
 
-const BRANDS: Brand[] = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Other'];
 const CONDITIONS: Condition[] = ['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor'];
 const CONDITION_DESCRIPTIONS: Record<Condition, string> = {
   New: 'Sealed box, never used',
@@ -24,8 +24,7 @@ const CONDITION_DESCRIPTIONS: Record<Condition, string> = {
 
 interface FormData {
   type: ProductType;
-  brand: Brand;
-  model: string;
+  phoneType: string;
   ram: string;
   storage: string;
   condition: Condition | '';
@@ -65,8 +64,7 @@ export default function ProductForm() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({
     type: defaultType,
-    brand: 'iPhone',
-    model: '',
+    phoneType: '',
     ram: '',
     storage: '',
     condition: '',
@@ -102,8 +100,7 @@ export default function ProductForm() {
       formPopulated.current = true;
       setForm({
         type: existingProduct.type,
-        brand: existingProduct.brand,
-        model: existingProduct.model,
+        phoneType: existingProduct.phoneType,
         ram: existingProduct.ram ?? '',
         storage: existingProduct.storage ?? '',
         condition: existingProduct.condition ?? '',
@@ -167,7 +164,8 @@ export default function ProductForm() {
   // ---- Validation ----
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
-    if (!form.model.trim()) newErrors.model = 'Model is required';
+    const validation = validatePhoneType(form.phoneType);
+    if (!validation.valid) newErrors.phoneType = validation.error || 'Phone type is required';
     if (form.price === null || !Number.isFinite(form.price) || form.price <= 0) newErrors.price = 'Valid price required';
     if (!form.stockQuantity || Number(form.stockQuantity) < 0) newErrors.stockQuantity = 'Valid quantity required';
     if (form.type === 'phone' && !form.storage) newErrors.storage = 'Storage required for phones';
@@ -205,8 +203,7 @@ export default function ProductForm() {
 
       const common = {
         type: form.type,
-        brand: form.brand,
-        model: form.model.trim(),
+        phoneType: normalizePhoneType(form.phoneType),
         ram: form.ram || undefined,
         storage: form.storage || undefined,
         condition: (form.condition as Condition) || undefined,
@@ -363,36 +360,19 @@ export default function ProductForm() {
             </div>
           )}
 
-          {/* Brand */}
+          {/* Phone Type */}
           <div>
-            <label className="text-xs font-medium text-gray-600 mb-1.5 block">Brand</label>
-            <div className="relative">
-              <select
-                value={form.brand}
-                onChange={(e) => update('brand', e.target.value as Brand)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 appearance-none outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {BRANDS.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Model */}
-          <div>
-            <label className="text-xs font-medium text-gray-600 mb-1.5 block">Model *</label>
+            <label className="text-xs font-medium text-gray-600 mb-1.5 block">Phone Type *</label>
             <input
               type="text"
-              value={form.model}
-              onChange={(e) => update('model', e.target.value)}
-              placeholder={isPhone ? 'e.g. iPhone 14 Pro' : 'e.g. AirPods Pro 2nd Gen'}
+              value={form.phoneType}
+              onChange={(e) => update('phoneType', e.target.value)}
+              placeholder={isPhone ? 'e.g. iPhone 14 Pro Max' : 'e.g. AirPods Pro 2nd Gen'}
               className={`w-full bg-gray-50 border rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.model ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                errors.phoneType ? 'border-red-400 bg-red-50' : 'border-gray-200'
               }`}
             />
-            {errors.model && <p className="text-xs text-red-500 mt-1">{errors.model}</p>}
+            {errors.phoneType && <p className="text-xs text-red-500 mt-1">{errors.phoneType}</p>}
           </div>
 
           {/* Phone-specific fields */}
