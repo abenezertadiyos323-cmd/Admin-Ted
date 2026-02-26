@@ -135,7 +135,7 @@ export default function ThreadDetail() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-blue-800 truncate">
-                    {ex.tradeInBrand} {ex.tradeInModel} → {ex.desiredPhone?.model ?? 'Unknown'}
+                    {ex.tradeInBrand} {ex.tradeInModel} → {ex.desiredPhone?.phoneType ?? 'Unknown'}
                   </p>
                   <p className="text-[11px] text-blue-500">
                     Pay {formatETB(ex.finalDifference)}

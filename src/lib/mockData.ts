@@ -18,8 +18,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_1',
     type: 'phone',
-    brand: 'iPhone',
-    model: 'iPhone 14 Pro',
+    phoneType: 'iPhone 14 Pro',
     ram: '6GB',
     storage: '256GB',
     condition: 'Excellent',
@@ -36,8 +35,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_2',
     type: 'phone',
-    brand: 'Samsung',
-    model: 'Galaxy S23 Ultra',
+    phoneType: 'Galaxy S23 Ultra',
     ram: '12GB',
     storage: '512GB',
     condition: 'Good',
@@ -54,8 +52,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_3',
     type: 'phone',
-    brand: 'iPhone',
-    model: 'iPhone 13',
+    phoneType: 'iPhone 13',
     ram: '4GB',
     storage: '128GB',
     condition: 'Good',
@@ -72,8 +69,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_4',
     type: 'phone',
-    brand: 'Tecno',
-    model: 'Camon 20 Pro',
+    phoneType: 'Camon 20 Pro',
     ram: '8GB',
     storage: '256GB',
     condition: 'Excellent',
@@ -90,8 +86,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_5',
     type: 'phone',
-    brand: 'Xiaomi',
-    model: 'Redmi Note 12 Pro',
+    phoneType: 'Redmi Note 12 Pro',
     ram: '8GB',
     storage: '256GB',
     condition: 'Excellent',
@@ -108,8 +103,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_6',
     type: 'phone',
-    brand: 'Samsung',
-    model: 'Galaxy A54',
+    phoneType: 'Galaxy A54',
     ram: '8GB',
     storage: '128GB',
     condition: 'Fair',
@@ -126,8 +120,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_7',
     type: 'accessory',
-    brand: 'Other',
-    model: 'AirPods Pro 2nd Gen',
+    phoneType: 'AirPods Pro 2nd Gen',
     price: 18000,
     stockQuantity: 6,
     exchangeEnabled: false,
@@ -141,8 +134,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_8',
     type: 'accessory',
-    brand: 'Samsung',
-    model: 'Galaxy Buds2 Pro',
+    phoneType: 'Galaxy Buds2 Pro',
     price: 12000,
     stockQuantity: 2,
     exchangeEnabled: false,
@@ -156,8 +148,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_9',
     type: 'phone',
-    brand: 'Infinix',
-    model: 'Note 30 Pro',
+    phoneType: 'Note 30 Pro',
     ram: '8GB',
     storage: '256GB',
     condition: 'Excellent',
@@ -174,8 +165,7 @@ export const mockProducts: Product[] = [
   {
     _id: 'prod_10',
     type: 'phone',
-    brand: 'Oppo',
-    model: 'Reno 10 Pro',
+    phoneType: 'Reno 10 Pro',
     ram: '12GB',
     storage: '256GB',
     condition: 'Good',

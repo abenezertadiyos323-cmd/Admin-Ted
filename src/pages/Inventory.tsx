@@ -6,12 +6,11 @@ import ProductCard from '../components/ProductCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
-import type { Product, Brand, ProductType, Condition } from '../types';
+import type { Product, ProductType, Condition } from '../types';
 import { getSearchHistory, addToSearchHistory, clearSearchHistory } from '../utils/searchHistory';
 
 type InventoryTab = 'all' | 'inStock' | 'lowStock' | 'outOfStock' | 'exchangeEnabled' | 'archived';
 
-const BRANDS: Brand[] = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Other'];
 const PRODUCT_TABS: { key: ProductType; label: string }[] = [
   { key: 'phone', label: 'Phones' },
   { key: 'accessory', label: 'Accessories' },
@@ -69,7 +68,6 @@ export default function Inventory() {
   const [activeType, setActiveType] = useState<ProductType>(
     () => isProductType(inventoryTypeParam) ? inventoryTypeParam : 'phone',
   );
-  const [activeBrand, setActiveBrand] = useState<Brand | 'All'>('All');
   // Initialise tab from URL param so Dashboard deep-links still work.
   const [tab, setTab] = useState<InventoryTab>(
     () => searchParams.get('filter') === 'lowstock' ? 'lowStock' : 'all',
@@ -106,7 +104,6 @@ export default function Inventory() {
   const convexProducts = useQuery(api.products.listProducts, {
     tab,
     type: activeType,
-    brand: activeBrand !== 'All' ? activeBrand : undefined,
     q: committedQ || undefined,
     condition: advancedFilters.condition,
     priceMin: advancedFilters.priceMin,
@@ -350,10 +347,7 @@ export default function Inventory() {
           {PRODUCT_TABS.map((pt) => (
             <button
               key={pt.key}
-              onClick={() => {
-                setActiveType(pt.key);
-                setActiveBrand('All');
-              }}
+              onClick={() => setActiveType(pt.key)}
               className={`flex-1 py-2.5 text-sm font-semibold relative transition-colors ${
                 activeType === pt.key ? 'text-blue-600' : 'text-gray-500'
               }`}
@@ -380,31 +374,6 @@ export default function Inventory() {
             </button>
           ))}
         </div>
-
-        {/* Brand filter (phones only) */}
-        {activeType === 'phone' && (
-          <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
-            <button
-              onClick={() => setActiveBrand('All')}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                activeBrand === 'All' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              All
-            </button>
-            {BRANDS.map((brand) => (
-              <button
-                key={brand}
-                onClick={() => setActiveBrand(brand)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeBrand === brand ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                {brand}
-              </button>
-            ))}
-          </div>
-        )}
 
       </div>
 
@@ -476,7 +445,7 @@ export default function Inventory() {
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
             <h2 className="text-base font-bold text-gray-900 mb-1">Confirm stock decrease</h2>
             <p className="text-xs text-gray-500 mb-4">
-              {`${confirmDecrementProduct.brand} ${confirmDecrementProduct.model}: ${confirmDecrementProduct.stockQuantity} → ${Math.max(0, confirmDecrementProduct.stockQuantity - 1)}`}
+              {`${confirmDecrementProduct.phoneType}: ${confirmDecrementProduct.stockQuantity} → ${Math.max(0, confirmDecrementProduct.stockQuantity - 1)}`}
             </p>
             <div className="flex gap-2">
               <button

@@ -33,7 +33,7 @@ export default function ExchangeDetail() {
             tradeInModel: `${ex.tradeInBrand} ${ex.tradeInModel}`,
             tradeInValue: ex.finalTradeInValue,
             desiredPhoneModel: ex.desiredPhone
-              ? `${ex.desiredPhone.brand} ${ex.desiredPhone.model}`
+              ? ex.desiredPhone.phoneType
               : 'Desired Phone',
             desiredPhonePrice: ex.desiredPhonePrice,
             difference: ex.finalDifference,
@@ -174,7 +174,7 @@ export default function ExchangeDetail() {
               </div>
               <div>
                 <p className="text-sm font-bold text-gray-900">
-                  {exchange.desiredPhone.brand} {exchange.desiredPhone.model}
+                  {exchange.desiredPhone.phoneType}
                 </p>
                 {exchange.desiredPhone.storage && (
                   <p className="text-xs text-gray-500">{exchange.desiredPhone.storage}</p>

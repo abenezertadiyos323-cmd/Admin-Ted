@@ -45,7 +45,7 @@ export default function ExchangeCard({ exchange, onClick }: ExchangeCardProps) {
           <p className="text-[10px] text-blue-400 font-medium mb-0.5">WANTS</p>
           <p className="text-xs font-semibold text-blue-800 leading-tight">
             {exchange.desiredPhone
-              ? `${exchange.desiredPhone.brand} ${exchange.desiredPhone.model}`
+              ? exchange.desiredPhone.phoneType
               : 'Unknown Phone'}
           </p>
           {exchange.desiredPhone?.storage && (
