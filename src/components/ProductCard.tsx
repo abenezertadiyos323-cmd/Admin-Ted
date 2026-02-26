@@ -37,8 +37,16 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             {product.brand}
           </span>
-          {product.exchangeEnabled && (
-            <Lock size={11} className="text-green-500 flex-shrink-0" />
+          {product.exchangeEnabled ? (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Exchange
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700">
+              <Lock size={10} />
+              Locked
+            </span>
           )}
         </div>
         <p className="text-sm font-semibold text-gray-900 truncate">{product.model}</p>

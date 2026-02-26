@@ -6,16 +6,13 @@ import ProductCard from '../components/ProductCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
-import type { Product, Brand, ProductType, Condition } from '../types';
+import type { Product, Brand, ProductType } from '../types';
 import { getSearchHistory, addToSearchHistory, clearSearchHistory } from '../utils/searchHistory';
 
 const BRANDS: Brand[] = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Other'];
 const PRODUCT_TABS: { key: ProductType; label: string }[] = [
   { key: 'phone', label: 'Phones' },
   { key: 'accessory', label: 'Accessories' },
-];
-const CONDITION_OPTIONS: Array<Condition | 'All'> = [
-  'All', 'New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor',
 ];
 type SortKey = 'newest' | 'price_asc' | 'price_desc';
 type ExchangeFilter = 'all' | 'on' | 'off';
@@ -48,7 +45,6 @@ export default function Inventory() {
   const [searchHistory, setSearchHistory] = useState<string[]>(() => getSearchHistory());
   const [searchFocused, setSearchFocused] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('newest');
-  const [filterCondition, setFilterCondition] = useState<Condition | 'All'>('All');
   const [filterExchange, setFilterExchange] = useState<ExchangeFilter>('all');
   const [confirmDecrementProduct, setConfirmDecrementProduct] = useState<Product | null>(null);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
@@ -107,13 +103,12 @@ export default function Inventory() {
         p.brand.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesLowStock = !isLowStock || p.stockQuantity <= 2;
-      const matchesCondition = filterCondition === 'All' || p.condition === filterCondition;
       const matchesExchange =
         filterExchange === 'all' ||
         (filterExchange === 'on' && p.exchangeEnabled) ||
         (filterExchange === 'off' && !p.exchangeEnabled);
 
-      return matchesBrand && matchesSearch && matchesLowStock && matchesCondition && matchesExchange;
+      return matchesBrand && matchesSearch && matchesLowStock && matchesExchange;
     })
     .sort((a, b) => {
       if (sortKey === 'price_asc') return a.price - b.price;
@@ -156,7 +151,6 @@ export default function Inventory() {
 
   const showHistoryChips = searchFocused && !searchQuery && searchHistory.length > 0;
   const activeFilterCount =
-    (filterCondition !== 'All' ? 1 : 0) +
     (filterExchange !== 'all' ? 1 : 0) +
     (sortKey !== 'newest' ? 1 : 0);
 
@@ -242,7 +236,6 @@ export default function Inventory() {
               onClick={() => {
                 setActiveType(tab.key);
                 setActiveBrand('All');
-                setFilterCondition('All');
               }}
               className={`flex-1 py-2.5 text-sm font-semibold relative transition-colors ${
                 activeType === tab.key ? 'text-blue-600' : 'text-gray-500'
@@ -306,33 +299,6 @@ export default function Inventory() {
             />
           </div>
 
-          {/* Condition quick filter (phones only) */}
-          {activeType === 'phone' && (
-            <div className="relative flex-shrink-0">
-              <select
-                value={filterCondition}
-                onChange={(e) => setFilterCondition(e.target.value as Condition | 'All')}
-                className={`pl-2.5 pr-6 py-1.5 rounded-xl text-xs font-semibold appearance-none outline-none transition-all cursor-pointer ${
-                  filterCondition !== 'All'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                {CONDITION_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c === 'All' ? 'Condition' : c}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={11}
-                className={`absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none ${
-                  filterCondition !== 'All' ? 'text-white' : 'text-gray-400'
-                }`}
-              />
-            </div>
-          )}
-
           {/* Exchange quick filter — cycles all → on → off */}
           <button
             onClick={() =>
@@ -360,7 +326,6 @@ export default function Inventory() {
             <button
               onClick={() => {
                 setSortKey('newest');
-                setFilterCondition('All');
                 setFilterExchange('all');
               }}
               className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-gray-200 text-gray-600 transition-all active:scale-95"

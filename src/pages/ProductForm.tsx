@@ -29,7 +29,7 @@ interface FormData {
   ram: string;
   storage: string;
   condition: Condition | '';
-  price: string;
+  price: number | null;
   stockQuantity: string;
   exchangeEnabled: boolean;
   description: string;
@@ -40,6 +40,15 @@ interface PendingImage {
   order: number;
   preview: string; // ObjectURL from the processed blob
 }
+
+const formatPriceForInput = (price: number) => price.toLocaleString('en-US');
+
+const parsePriceInput = (value: string): number | null => {
+  const digitsOnly = value.replace(/\D/g, '');
+  if (!digitsOnly) return null;
+  const parsed = Number.parseInt(digitsOnly, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
 
 export default function ProductForm() {
   const navigate = useNavigate();
@@ -56,11 +65,12 @@ export default function ProductForm() {
     ram: '',
     storage: '',
     condition: '',
-    price: '',
+    price: null,
     stockQuantity: '1',
     exchangeEnabled: false,
     description: '',
   });
+  const [priceText, setPriceText] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
@@ -87,11 +97,12 @@ export default function ProductForm() {
         ram: existingProduct.ram ?? '',
         storage: existingProduct.storage ?? '',
         condition: existingProduct.condition ?? '',
-        price: String(existingProduct.price),
+        price: existingProduct.price,
         stockQuantity: String(existingProduct.stockQuantity),
         exchangeEnabled: existingProduct.exchangeEnabled,
         description: existingProduct.description ?? '',
       });
+      setPriceText(existingProduct.price > 0 ? formatPriceForInput(existingProduct.price) : '');
     }
   }, [existingProduct]);
 
@@ -140,7 +151,7 @@ export default function ProductForm() {
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!form.model.trim()) newErrors.model = 'Model is required';
-    if (!form.price || Number(form.price) <= 0) newErrors.price = 'Valid price required';
+    if (form.price === null || form.price <= 0) newErrors.price = 'Valid price required';
     if (!form.stockQuantity || Number(form.stockQuantity) < 0) newErrors.stockQuantity = 'Valid quantity required';
     if (form.type === 'phone' && !form.storage) newErrors.storage = 'Storage required for phones';
     if (form.type === 'phone' && !form.condition) newErrors.condition = 'Condition required for phones';
@@ -171,7 +182,7 @@ export default function ProductForm() {
         ram: form.ram || undefined,
         storage: form.storage || undefined,
         condition: (form.condition as Condition) || undefined,
-        price: Number(form.price),
+        price: form.price ?? 0,
         stockQuantity: Number(form.stockQuantity),
         exchangeEnabled: form.exchangeEnabled,
         description: form.description || undefined,
@@ -206,9 +217,15 @@ export default function ProductForm() {
     navigate('/inventory');
   };
 
-  const update = (key: keyof FormData, value: string | boolean) => {
+  const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
+  const handlePriceChange = (value: string) => {
+    const parsed = parsePriceInput(value);
+    update('price', parsed);
+    setPriceText(parsed === null ? '' : formatPriceForInput(parsed));
   };
 
   if (loading) {
@@ -314,7 +331,7 @@ export default function ProductForm() {
             <div className="relative">
               <select
                 value={form.brand}
-                onChange={(e) => update('brand', e.target.value)}
+                onChange={(e) => update('brand', e.target.value as Brand)}
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 appearance-none outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {BRANDS.map((b) => (
@@ -402,18 +419,18 @@ export default function ProductForm() {
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1.5 block">Price (ETB) *</label>
               <input
-                type="number"
-                value={form.price}
-                onChange={(e) => update('price', e.target.value)}
+                type="text"
+                value={priceText}
+                onChange={(e) => handlePriceChange(e.target.value)}
                 placeholder="e.g. 85000"
-                min="0"
+                inputMode="numeric"
                 className={`w-full bg-gray-50 border rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.price ? 'border-red-400 bg-red-50' : 'border-gray-200'
                 }`}
               />
               {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
-              {form.price && Number(form.price) > 0 && (
-                <p className="text-[11px] text-blue-600 mt-1">{formatETB(Number(form.price))}</p>
+              {form.price !== null && form.price > 0 && (
+                <p className="text-[11px] text-blue-600 mt-1">{formatETB(form.price)}</p>
               )}
             </div>
             <div>
