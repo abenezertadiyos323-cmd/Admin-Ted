@@ -154,6 +154,8 @@ export const listProducts = query({
     tab: v.optional(v.string()),
     // Category/type filter.
     type: v.optional(v.string()),
+    // Legacy brand filter (kept for frontend compatibility while phoneType migration completes).
+    brand: v.optional(v.string()),
     search: v.optional(v.string()),
     // Advanced filters.
     condition: v.optional(vCondition),
@@ -171,7 +173,7 @@ export const listProducts = query({
   },
   handler: async (
     ctx,
-    { tab, type, search, condition, priceMin, priceMax, hasImages, storageGb, q,
+    { tab, type, brand, search, condition, priceMin, priceMax, hasImages, storageGb, q,
       includeArchived, lowStockOnly },
   ) => {
     const normalizedTab = normalizeTab(tab);
@@ -248,6 +250,13 @@ export const listProducts = query({
 
     // --- Advanced filters (applied in-memory after index fetch) ---
     if (resolvedType) products = products.filter((p) => p.type === resolvedType);
+    if (brand) {
+      const normalizedBrand = brand.toLowerCase();
+      products = products.filter((p) => {
+        const legacyBrand = (p as unknown as { brand?: string }).brand;
+        return legacyBrand?.toLowerCase() === normalizedBrand;
+      });
+    }
     if (condition) products = products.filter((p) => p.condition === condition);
     if (priceMin !== undefined) products = products.filter((p) => p.price >= priceMin);
     if (priceMax !== undefined) products = products.filter((p) => p.price <= priceMax);
