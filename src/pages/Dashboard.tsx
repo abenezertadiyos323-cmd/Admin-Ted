@@ -10,6 +10,7 @@ import {
   Send,
   UserCheck,
   BarChart3,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -63,8 +64,18 @@ export default function Dashboard() {
             <p className="text-xs text-gray-500 font-medium">Good day,</p>
             <h1 className="text-xl font-bold text-gray-900">{user.first_name} 👋</h1>
           </div>
-          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-            {user.first_name.charAt(0).toUpperCase()}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Open settings"
+              onClick={() => navigate('/settings')}
+              className="w-10 h-10 rounded-full border border-gray-100 bg-gray-50 flex items-center justify-center text-gray-600 active:scale-95 transition-transform"
+            >
+              <SettingsIcon size={18} />
+            </button>
+            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+              {user.first_name.charAt(0).toUpperCase()}
+            </div>
           </div>
         </div>
       </div>

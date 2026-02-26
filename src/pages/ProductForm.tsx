@@ -10,6 +10,7 @@ import { getTelegramUser } from '../lib/telegram';
 import { processImage } from '../lib/imageProcessor';
 import { formatETB, getStockStatus } from '../lib/utils';
 import { normalizePhoneType, validatePhoneType } from '../lib/phoneTypeUtils';
+import { getBackendInfo } from '../lib/backend';
 import type { Condition, ProductType } from '../types';
 
 const CONDITIONS: Condition[] = ['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor'];
@@ -288,6 +289,8 @@ export default function ProductForm() {
 
   const isPhone = form.type === 'phone';
   const stockStatus = getStockStatus(Number(form.stockQuantity) || 0);
+  const debugBackendInfo = getBackendInfo(import.meta.env.VITE_CONVEX_URL ?? '');
+  const debugHostname = debugBackendInfo.hostname ?? debugBackendInfo.label ?? 'unset';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -540,9 +543,11 @@ export default function ProductForm() {
         </button>
 
         {/* DEBUG — visible in Telegram to confirm which Convex deployment is active */}
-        <p className="text-center text-[10px] text-gray-400 font-mono">
-          Convex: {(() => { try { return new URL(import.meta.env.VITE_CONVEX_URL ?? '').hostname; } catch { return import.meta.env.VITE_CONVEX_URL ?? 'unset'; } })()}
-        </p>
+        {import.meta.env.DEV && (
+          <p className="text-center text-[10px] text-gray-400 font-mono">
+            Convex: {debugHostname}
+          </p>
+        )}
 
         {/* Archive / Restore (Edit only) */}
         {isEdit && existingProduct && (

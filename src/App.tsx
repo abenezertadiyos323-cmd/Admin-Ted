@@ -10,6 +10,8 @@ import ThreadDetail from "./pages/ThreadDetail";
 import Exchanges from "./pages/Exchanges";
 import ExchangeDetail from "./pages/ExchangeDetail";
 import Settings from "./pages/Settings";
+import SettingsAccess from "./pages/SettingsAccess";
+import SettingsBackend from "./pages/SettingsBackend";
 
 export default function App() {
   useEffect(() => {
@@ -29,6 +31,8 @@ export default function App() {
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/inbox/:id" element={<ThreadDetail />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/access" element={<SettingsAccess />} />
+          <Route path="/settings/backend" element={<SettingsBackend />} />
         </Route>
       </Routes>
     </BrowserRouter>
