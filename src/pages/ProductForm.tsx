@@ -50,12 +50,16 @@ const parsePriceInput = (value: string): number | null => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
+const isProductType = (value: string | null): value is ProductType =>
+  value === 'phone' || value === 'accessory';
+
 export default function ProductForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
-  const defaultType = (searchParams.get('type') as ProductType) || 'phone';
+  const searchType = searchParams.get('type');
+  const defaultType: ProductType = isProductType(searchType) ? searchType : 'phone';
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -79,6 +83,11 @@ export default function ProductForm() {
   const formPopulated = useRef(false);
 
   const user = getTelegramUser();
+  const getInventoryPath = () => {
+    const queryType = searchParams.get('type');
+    const inventoryType = isProductType(queryType) ? queryType : form.type;
+    return `/inventory?type=${inventoryType}`;
+  };
 
   // ---- Convex: load existing product (edit mode only) ----
   const existingProduct = useQuery(
@@ -214,7 +223,7 @@ export default function ProductForm() {
       } else {
         await createProductMutation({ ...common, createdBy: String(user.id) });
       }
-      navigate('/inventory');
+      navigate(getInventoryPath());
     } catch (err) {
       console.error('[ProductForm] save failed:', err);
       setSaveError(
@@ -229,14 +238,14 @@ export default function ProductForm() {
     if (!id) return;
     setSaving(true);
     await archiveProductMutation({ productId: id as Id<'products'> });
-    navigate('/inventory');
+    navigate(getInventoryPath());
   };
 
   const handleRestore = async () => {
     if (!id) return;
     setSaving(true);
     await restoreProductMutation({ productId: id as Id<'products'> });
-    navigate('/inventory');
+    navigate(getInventoryPath());
   };
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
@@ -271,7 +280,7 @@ export default function ProductForm() {
         <p className="text-gray-700 font-semibold">Product not found</p>
         <p className="text-gray-400 text-sm">This product may have been deleted.</p>
         <button
-          onClick={() => navigate('/inventory')}
+          onClick={() => navigate(getInventoryPath())}
           className="mt-2 text-blue-600 text-sm font-semibold active:scale-95 transition-transform"
         >
           ← Back to Inventory

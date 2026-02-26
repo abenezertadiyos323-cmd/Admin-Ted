@@ -1,22 +1,51 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
-import { Package, Search, X, Loader2 } from 'lucide-react';
+import { Package, Search, X, Loader2, SlidersHorizontal } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
-import type { Product, Brand, ProductType } from '../types';
+import type { Product, Brand, ProductType, Condition } from '../types';
 import { getSearchHistory, addToSearchHistory, clearSearchHistory } from '../utils/searchHistory';
+
+type InventoryTab = 'all' | 'inStock' | 'lowStock' | 'outOfStock' | 'exchangeEnabled' | 'archived';
 
 const BRANDS: Brand[] = ['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Other'];
 const PRODUCT_TABS: { key: ProductType; label: string }[] = [
   { key: 'phone', label: 'Phones' },
   { key: 'accessory', label: 'Accessories' },
 ];
+const FILTER_TABS: { key: InventoryTab; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'inStock', label: 'In Stock' },
+  { key: 'lowStock', label: 'Low Stock' },
+  { key: 'outOfStock', label: 'Out of Stock' },
+  { key: 'exchangeEnabled', label: 'Exchange' },
+  { key: 'archived', label: 'Archived' },
+];
 
-// Module-level cache so navigating back to Inventory feels instant
-const productCache: Partial<Record<ProductType, Product[]>> = {};
+type AdvancedFilters = {
+  condition?: Condition;
+  priceMin?: number;
+  priceMax?: number;
+  storageGb?: number;
+  hasImages?: boolean;
+};
+
+const CONDITIONS: { value: Condition; label: string }[] = [
+  { value: 'Excellent', label: 'Excellent' },
+  { value: 'Good', label: 'Good' },
+  { value: 'Fair', label: 'Fair' },
+  { value: 'Poor', label: 'Poor' },
+];
+
+const STORAGE_OPTIONS = [64, 128, 256, 512] as const;
+
+// Module-level cache: keyed by "type-tab-filters" so each combination feels instant on re-visit.
+const productCache: Partial<Record<string, Product[]>> = {};
+const isProductType = (value: string | null): value is ProductType =>
+  value === 'phone' || value === 'accessory';
 
 function ProductSkeleton() {
   return (
@@ -35,10 +64,16 @@ function ProductSkeleton() {
 export default function Inventory() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isLowStock = searchParams.get('filter') === 'lowstock';
+  const inventoryTypeParam = searchParams.get('type');
 
-  const [activeType, setActiveType] = useState<ProductType>('phone');
+  const [activeType, setActiveType] = useState<ProductType>(
+    () => isProductType(inventoryTypeParam) ? inventoryTypeParam : 'phone',
+  );
   const [activeBrand, setActiveBrand] = useState<Brand | 'All'>('All');
+  // Initialise tab from URL param so Dashboard deep-links still work.
+  const [tab, setTab] = useState<InventoryTab>(
+    () => searchParams.get('filter') === 'lowstock' ? 'lowStock' : 'all',
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<string[]>(() => getSearchHistory());
   const [searchFocused, setSearchFocused] = useState(false);
@@ -50,17 +85,36 @@ export default function Inventory() {
   // isSearching: true while the debounce timer is pending
   const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Advanced filter drawer
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({});
+  const [draftFilters, setDraftFilters] = useState<AdvancedFilters>({});
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const updateStockQuantity = useMutation(api.products.updateStockQuantity);
 
+  // Number of active advanced filters — drives the indicator dot on the filter icon
+  const activeFilterCount = [
+    advancedFilters.condition,
+    advancedFilters.priceMin,
+    advancedFilters.priceMax,
+    advancedFilters.storageGb,
+    advancedFilters.hasImages,
+  ].filter((v) => v !== undefined).length;
+
   // Convex real-time query — returns undefined on first subscribe or when args change
+  const cacheKey = `${activeType}-${tab}-${JSON.stringify(advancedFilters)}`;
   const convexProducts = useQuery(api.products.listProducts, {
+    tab,
     type: activeType,
     brand: activeBrand !== 'All' ? activeBrand : undefined,
-    lowStockOnly: isLowStock || undefined,
     q: committedQ || undefined,
+    condition: advancedFilters.condition,
+    priceMin: advancedFilters.priceMin,
+    priceMax: advancedFilters.priceMax,
+    storageGb: advancedFilters.storageGb,
+    hasImages: advancedFilters.hasImages,
   });
-  const cached = productCache[activeType];
+  const cached = productCache[cacheKey];
   // Only show skeleton when BOTH Convex and cache are empty
   const loading = convexProducts === undefined && !cached;
   const products = (convexProducts ?? cached ?? []) as Product[];
@@ -68,9 +122,9 @@ export default function Inventory() {
   // Keep module-level cache warm so re-visits are instant
   useEffect(() => {
     if (convexProducts !== undefined) {
-      productCache[activeType] = convexProducts as Product[];
+      productCache[cacheKey] = convexProducts as Product[];
     }
-  }, [activeType, convexProducts]);
+  }, [cacheKey, convexProducts]);
 
   // Save to history on blur if the query is meaningful
   const handleSearchBlur = () => {
@@ -92,6 +146,23 @@ export default function Inventory() {
   const handleClearHistory = () => {
     clearSearchHistory();
     setSearchHistory([]);
+  };
+
+  // Advanced filter drawer handlers
+  const openDrawer = () => {
+    setDraftFilters({ ...advancedFilters });
+    setDrawerOpen(true);
+  };
+
+  const handleApplyFilters = () => {
+    setAdvancedFilters({ ...draftFilters });
+    setDrawerOpen(false);
+  };
+
+  const handleResetFilters = () => {
+    setAdvancedFilters({});
+    setDraftFilters({});
+    setDrawerOpen(false);
   };
 
   // Debounce effect: fires on every keystroke, commits search to backend after 300ms
@@ -195,48 +266,56 @@ export default function Inventory() {
           {/* Title row */}
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
-            {isLowStock && (
-              <span className="text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full">
-                Low Stock
-              </span>
-            )}
           </div>
 
-          {/* Search bar */}
-          <div className="relative mb-2">
-            {showLoader ? (
-              <Loader2
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 animate-spin pointer-events-none"
+          {/* Search bar + filter button */}
+          <div className="flex gap-2 mb-2">
+            <div className="relative flex-1">
+              {showLoader ? (
+                <Loader2
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 animate-spin pointer-events-none"
+                />
+              ) : (
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+              )}
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={handleSearchBlur}
+                className="w-full bg-gray-100 rounded-xl pl-9 pr-9 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
               />
-            ) : (
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-              />
-            )}
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={handleSearchBlur}
-              className="w-full bg-gray-100 rounded-xl pl-9 pr-9 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
-            />
-            {searchQuery && (
-              <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setSearchQuery('');
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 active:scale-90 transition-transform"
-              >
-                <X size={15} />
-              </button>
-            )}
+              {searchQuery && (
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setSearchQuery('');
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 active:scale-90 transition-transform"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+            {/* Advanced filter icon */}
+            <button
+              type="button"
+              onClick={openDrawer}
+              className="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 active:scale-95 transition-transform"
+            >
+              <SlidersHorizontal size={16} />
+              {activeFilterCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600" />
+              )}
+            </button>
           </div>
 
           {/* Recent search chips */}
@@ -268,21 +347,36 @@ export default function Inventory() {
 
         {/* Type tabs */}
         <div className="flex border-b border-gray-100 px-4">
-          {PRODUCT_TABS.map((tab) => (
+          {PRODUCT_TABS.map((pt) => (
             <button
-              key={tab.key}
+              key={pt.key}
               onClick={() => {
-                setActiveType(tab.key);
+                setActiveType(pt.key);
                 setActiveBrand('All');
               }}
               className={`flex-1 py-2.5 text-sm font-semibold relative transition-colors ${
-                activeType === tab.key ? 'text-blue-600' : 'text-gray-500'
+                activeType === pt.key ? 'text-blue-600' : 'text-gray-500'
               }`}
             >
-              {tab.label}
-              {activeType === tab.key && (
+              {pt.label}
+              {activeType === pt.key && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
               )}
+            </button>
+          ))}
+        </div>
+
+        {/* Status filter chips — All, In Stock, Low Stock, Out of Stock, Exchange, Archived */}
+        <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide border-b border-gray-100">
+          {FILTER_TABS.map((ft) => (
+            <button
+              key={ft.key}
+              onClick={() => setTab(ft.key)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                tab === ft.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {ft.label}
             </button>
           ))}
         </div>
@@ -337,13 +431,13 @@ export default function Inventory() {
           <div className="space-y-2">
             <p className="text-xs text-gray-400 font-medium mb-2">
               {products.length} product{products.length !== 1 ? 's' : ''}
-              {isLowStock ? ' · Low stock' : ''}
+              {tab !== 'all' ? ` · ${FILTER_TABS.find((ft) => ft.key === tab)?.label ?? ''}` : ''}
             </p>
             {products.map((product) => (
               <div key={product._id} className="space-y-1">
                 <ProductCard
                   product={product}
-                  onClick={() => navigate(`/inventory/${product._id}`)}
+                  onClick={() => navigate(`/inventory/${product._id}?type=${activeType}`)}
                 />
                 <div className="flex items-center justify-end gap-2 px-2">
                   <button
@@ -399,6 +493,163 @@ export default function Inventory() {
                 className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
               >
                 Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Filter Drawer */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setDrawerOpen(false)}
+          />
+          {/* Sheet */}
+          <div
+            className="relative bg-white rounded-t-3xl w-full animate-in slide-in-from-bottom duration-200"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+          >
+            {/* Handle */}
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3">
+              <h2 className="text-base font-bold text-gray-900">Filters</h2>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:scale-90 transition-transform"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Filter sections */}
+            <div className="px-5 space-y-5 max-h-[60vh] overflow-y-auto pb-2">
+
+              {/* Condition */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Condition</p>
+                <div className="flex gap-2 flex-wrap">
+                  {CONDITIONS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() =>
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          condition: prev.condition === c.value ? undefined : c.value,
+                        }))
+                      }
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                        draftFilters.condition === c.value
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-600 border-gray-200'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price Range</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={draftFilters.priceMin ?? ''}
+                    onChange={(e) =>
+                      setDraftFilters((prev) => ({
+                        ...prev,
+                        priceMin: e.target.value ? Number(e.target.value) : undefined,
+                      }))
+                    }
+                    className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+                  />
+                  <span className="text-gray-400 text-sm font-medium">–</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={draftFilters.priceMax ?? ''}
+                    onChange={(e) =>
+                      setDraftFilters((prev) => ({
+                        ...prev,
+                        priceMax: e.target.value ? Number(e.target.value) : undefined,
+                      }))
+                    }
+                    className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Storage */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Storage</p>
+                <select
+                  value={draftFilters.storageGb ?? ''}
+                  onChange={(e) =>
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      storageGb: e.target.value ? Number(e.target.value) : undefined,
+                    }))
+                  }
+                  className="w-full bg-gray-100 rounded-xl px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors appearance-none"
+                >
+                  <option value="">Any</option>
+                  {STORAGE_OPTIONS.map((gb) => (
+                    <option key={gb} value={gb}>
+                      {gb} GB
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Has Images */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">Has Images</p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      hasImages: prev.hasImages ? undefined : true,
+                    }))
+                  }
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    draftFilters.hasImages ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      draftFilters.hasImages ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+            </div>
+
+            {/* Footer buttons */}
+            <div className="flex gap-3 px-5 pt-4">
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm active:scale-95 transition-transform"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyFilters}
+                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:scale-95 transition-transform"
+              >
+                Apply Filters
               </button>
             </div>
           </div>
