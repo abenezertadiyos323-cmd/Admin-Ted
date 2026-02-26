@@ -21,7 +21,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
         {imageUrl ? (
           <img
             src={imageUrl}
-            alt={`${product.brand} ${product.model}`}
+            alt={product.phoneType}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -34,9 +34,6 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            {product.brand}
-          </span>
           {product.exchangeEnabled ? (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -49,7 +46,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
             </span>
           )}
         </div>
-        <p className="text-sm font-semibold text-gray-900 truncate">{product.model}</p>
+        <p className="text-sm font-semibold text-gray-900 truncate">{product.phoneType}</p>
         {product.storage && (
           <p className="text-xs text-gray-500">{product.storage}</p>
         )}

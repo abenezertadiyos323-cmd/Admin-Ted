@@ -6,15 +6,6 @@
 
 export type ProductType = 'phone' | 'accessory';
 
-export type Brand =
-  | 'iPhone'
-  | 'Samsung'
-  | 'Tecno'
-  | 'Infinix'
-  | 'Xiaomi'
-  | 'Oppo'
-  | 'Other';
-
 export type Condition = 'New' | 'Like New' | 'Excellent' | 'Good' | 'Fair' | 'Poor';
 
 export type ThreadStatus = 'new' | 'seen' | 'done';
@@ -62,8 +53,7 @@ export interface Admin {
 export interface Product {
   _id: string;
   type: ProductType;
-  brand: Brand;
-  model: string;
+  phoneType: string;
   ram?: string;
   storage?: string;
   condition?: Condition;
