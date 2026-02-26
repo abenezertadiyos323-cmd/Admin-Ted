@@ -550,6 +550,11 @@ export default function ProductForm() {
           {saving ? 'Saving…' : isEdit ? 'Save Changes' : `Add ${form.type === 'phone' ? 'Phone' : 'Accessory'}`}
         </button>
 
+        {/* DEBUG — visible in Telegram to confirm which Convex deployment is active */}
+        <p className="text-center text-[10px] text-gray-400 font-mono">
+          Convex: {(() => { try { return new URL(import.meta.env.VITE_CONVEX_URL ?? '').hostname; } catch { return import.meta.env.VITE_CONVEX_URL ?? 'unset'; } })()}
+        </p>
+
         {/* Archive / Restore (Edit only) */}
         {isEdit && existingProduct && (
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">

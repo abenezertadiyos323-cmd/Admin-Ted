@@ -33,6 +33,26 @@ function normalizeExchangeEnabled(type: ProductType, exchangeEnabled: boolean) {
   return type === "phone" ? exchangeEnabled : false;
 }
 
+/**
+ * Build a normalized, lowercase search text from the indexable product fields.
+ * Used when inserting or updating a product so listProducts can filter without
+ * calling .toLowerCase() on every field at query time.
+ */
+function buildSearchText(p: {
+  brand: string;
+  model: string;
+  storage?: string;
+  ram?: string;
+  condition?: string;
+}): string {
+  return [p.brand, p.model, p.storage, p.ram, p.condition]
+    .filter((s): s is string => typeof s === "string" && s.length > 0)
+    .join(" ")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Image stored in DB: only storageId + order. url is computed at query time.
 const vImageInput = v.object({
   storageId: v.id("_storage"),
@@ -87,14 +107,15 @@ export const listProducts = query({
     type: v.optional(vProductType),
     brand: v.optional(vBrand),
     lowStockOnly: v.optional(v.boolean()),
+    q: v.optional(v.string()),
   },
-  handler: async (ctx, { includeArchived, type, brand, lowStockOnly }) => {
+  handler: async (ctx, { includeArchived, type, brand, lowStockOnly, q }) => {
     const indexedProducts = await ctx.db
       .query("products")
-      .withIndex("by_isArchived_createdAt", (q) =>
+      .withIndex("by_isArchived_createdAt", (qb) =>
         includeArchived
-          ? q.gte("isArchived", false) // all: false then true
-          : q.eq("isArchived", false)
+          ? qb.gte("isArchived", false) // all: false then true
+          : qb.eq("isArchived", false)
       )
       .order("desc")
       .collect();
@@ -116,6 +137,20 @@ export const listProducts = query({
     if (type) products = products.filter((p) => p.type === type);
     if (brand) products = products.filter((p) => p.brand === brand);
     if (lowStockOnly) products = products.filter((p) => p.stockQuantity <= 2);
+    if (q) {
+      // Normalize the query the same way buildSearchText normalizes stored values.
+      const ql = q.toLowerCase().replace(/\s+/g, " ").trim();
+      // Hard cap: consider only the newest 300 post-structural-filter candidates.
+      // This prevents an unbounded in-memory scan when q is provided.
+      const candidates = products.slice(0, 300);
+      products = candidates.filter((p) => {
+        // Fall back to inline concat for products not yet backfilled.
+        const st =
+          p.searchText ??
+          `${p.brand} ${p.model}`.toLowerCase();
+        return st.includes(ql);
+      });
+    }
 
     // Resolve thumbnail URL only
     return Promise.all(
@@ -171,6 +206,7 @@ export const createProduct = mutation({
       ...args,
       exchangeEnabled,
       isArchived: false,
+      searchText: buildSearchText(args),
       createdAt: now,
       updatedAt: now,
     });
@@ -210,9 +246,19 @@ export const updateProduct = mutation({
       effectiveExchangeEnabled,
     );
 
+    // Recompute searchText using the merged (effective) field values.
+    const searchText = buildSearchText({
+      brand: patch.brand ?? existing.brand,
+      model: patch.model ?? existing.model,
+      storage: patch.storage ?? existing.storage,
+      ram: patch.ram ?? existing.ram,
+      condition: patch.condition ?? existing.condition,
+    });
+
     await ctx.db.patch(productId, {
       ...patch,
       exchangeEnabled: normalizedExchangeEnabled,
+      searchText,
       updatedAt: Date.now(),
       updatedBy,
     });
@@ -272,6 +318,35 @@ export const restoreProduct = mutation({
       archivedAt: undefined,
       updatedAt: Date.now(),
     });
+  },
+});
+
+/**
+ * One-time backfill: compute and store searchText for every product that
+ * doesn't have it yet (i.e. created before this field was introduced).
+ * Run once from the Convex dashboard: call products:backfillSearchText with {}.
+ * Safe to re-run — skips rows that already have a non-empty searchText.
+ */
+export const backfillSearchText = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("products").collect();
+    let count = 0;
+    for (const p of all) {
+      if (!p.searchText) {
+        await ctx.db.patch(p._id, {
+          searchText: buildSearchText({
+            brand: p.brand,
+            model: p.model,
+            storage: p.storage,
+            ram: p.ram,
+            condition: p.condition,
+          }),
+        });
+        count++;
+      }
+    }
+    return { backfilled: count };
   },
 });
 

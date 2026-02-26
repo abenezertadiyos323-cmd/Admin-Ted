@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
-import { Package, Search, X } from 'lucide-react';
+import { Package, Search, X, Loader2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../../convex/_generated/api';
@@ -17,16 +17,6 @@ const PRODUCT_TABS: { key: ProductType; label: string }[] = [
 
 // Module-level cache so navigating back to Inventory feels instant
 const productCache: Partial<Record<ProductType, Product[]>> = {};
-const getProductTimestamp = (product: Product): number => {
-  const createdAt = typeof product.createdAt === 'number' ? product.createdAt : undefined;
-  const convexCreationTime =
-    typeof (product as Product & { _creationTime?: number })._creationTime === 'number'
-      ? (product as Product & { _creationTime?: number })._creationTime
-      : undefined;
-  const updatedAt = typeof product.updatedAt === 'number' ? product.updatedAt : undefined;
-
-  return createdAt ?? convexCreationTime ?? updatedAt ?? 0;
-};
 
 function ProductSkeleton() {
   return (
@@ -55,11 +45,21 @@ export default function Inventory() {
   const [confirmDecrementProduct, setConfirmDecrementProduct] = useState<Product | null>(null);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
+  // committedQ is the value actually sent to the backend (debounced)
+  const [committedQ, setCommittedQ] = useState('');
+  // isSearching: true while the debounce timer is pending
+  const [isSearching, setIsSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateStockQuantity = useMutation(api.products.updateStockQuantity);
 
-  // Convex real-time query — returns undefined on first subscribe
-  const convexProducts = useQuery(api.products.listProducts, { type: activeType });
+  // Convex real-time query — returns undefined on first subscribe or when args change
+  const convexProducts = useQuery(api.products.listProducts, {
+    type: activeType,
+    brand: activeBrand !== 'All' ? activeBrand : undefined,
+    lowStockOnly: isLowStock || undefined,
+    q: committedQ || undefined,
+  });
   const cached = productCache[activeType];
   // Only show skeleton when BOTH Convex and cache are empty
   const loading = convexProducts === undefined && !cached;
@@ -94,25 +94,60 @@ export default function Inventory() {
     setSearchHistory([]);
   };
 
-  // Filtering + sorting
-  const filteredAndSorted = [...products]
-    .filter((p) => {
-      const matchesBrand =
-        activeBrand === 'All' ||
-        (activeBrand === 'Other'
-          ? !['iPhone', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo'].includes(p.brand)
-          : p.brand === activeBrand);
+  // Debounce effect: fires on every keystroke, commits search to backend after 300ms
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
 
-      const matchesSearch =
-        !searchQuery ||
-        p.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!searchQuery) {
+      setCommittedQ('');
+      setIsSearching(false);
+      return;
+    }
 
-      const matchesLowStock = !isLowStock || p.stockQuantity <= 2;
+    const isNumeric = /^[0-9]+$/.test(searchQuery);
+    const minLen = isNumeric ? 3 : 2;
 
-      return matchesBrand && matchesSearch && matchesLowStock;
-    })
-    .sort((a, b) => getProductTimestamp(b) - getProductTimestamp(a));
+    if (searchQuery.length < minLen) {
+      // Below minimum — clear any prior search and show default list
+      setCommittedQ('');
+      setIsSearching(false);
+      return;
+    }
+
+    // Above minimum — show loader immediately, then commit after 300ms
+    setIsSearching(true);
+    debounceRef.current = setTimeout(() => {
+      setIsSearching(false); // Debounce fired; query loading takes over the indicator
+      setCommittedQ(searchQuery);
+    }, 300);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Enter key: bypass debounce and trigger immediately
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (!searchQuery) {
+      setCommittedQ('');
+      setIsSearching(false);
+      return;
+    }
+    const isNumeric = /^[0-9]+$/.test(searchQuery);
+    const minLen = isNumeric ? 3 : 2;
+    if (searchQuery.length >= minLen) {
+      setIsSearching(false);
+      setCommittedQ(searchQuery);
+    }
+  };
+
+  // Loader indicator: true while debounce is pending OR while Convex is fetching
+  const showLoader = isSearching || (convexProducts === undefined && !!committedQ);
 
   // Stock management helpers
   const setProductPending = (productId: string, pending: boolean) => {
@@ -169,16 +204,24 @@ export default function Inventory() {
 
           {/* Search bar */}
           <div className="relative mb-2">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            />
+            {showLoader ? (
+              <Loader2
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 animate-spin pointer-events-none"
+              />
+            ) : (
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              />
+            )}
             <input
               ref={searchRef}
               type="text"
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
               onFocus={() => setSearchFocused(true)}
               onBlur={handleSearchBlur}
               className="w-full bg-gray-100 rounded-xl pl-9 pr-9 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
@@ -280,23 +323,23 @@ export default function Inventory() {
               <ProductSkeleton key={n} />
             ))}
           </div>
-        ) : filteredAndSorted.length === 0 ? (
+        ) : products.length === 0 ? (
           <EmptyState
             icon={<Package size={28} />}
             title="No products found"
             subtitle={
-              searchQuery
-                ? `No results for "${searchQuery}"`
+              committedQ
+                ? `No results for "${committedQ}"`
                 : 'Add your first product using the + button'
             }
           />
         ) : (
           <div className="space-y-2">
             <p className="text-xs text-gray-400 font-medium mb-2">
-              {filteredAndSorted.length} product{filteredAndSorted.length !== 1 ? 's' : ''}
+              {products.length} product{products.length !== 1 ? 's' : ''}
               {isLowStock ? ' · Low stock' : ''}
             </p>
-            {filteredAndSorted.map((product) => (
+            {products.map((product) => (
               <div key={product._id} className="space-y-1">
                 <ProductCard
                   product={product}

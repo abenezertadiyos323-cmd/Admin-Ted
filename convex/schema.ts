@@ -110,6 +110,10 @@ export default defineSchema({
     createdBy: v.string(),
     updatedAt: v.number(),
     updatedBy: v.string(),
+
+    // Normalized search field: lowercase brand + model + storage + ram + condition.
+    // Optional so legacy rows remain valid until backfillSearchText is run.
+    searchText: v.optional(v.string()),
   })
     .index("by_type", ["type"])
     .index("by_brand", ["brand"])
