@@ -22,14 +22,14 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/add" element={<ProductForm />} />
+          <Route path="/inventory/:id" element={<ProductForm />} />
           <Route path="/exchanges" element={<Exchanges />} />
+          <Route path="/exchanges/:id" element={<ExchangeDetail />} />
           <Route path="/inbox" element={<Inbox />} />
+          <Route path="/inbox/:id" element={<ThreadDetail />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
-        <Route path="/inventory/add" element={<ProductForm />} />
-        <Route path="/inventory/:id" element={<ProductForm />} />
-        <Route path="/inbox/:id" element={<ThreadDetail />} />
-        <Route path="/exchanges/:id" element={<ExchangeDetail />} />
-        <Route path="/settings" element={<Settings />} />
       </Routes>
     </BrowserRouter>
   );

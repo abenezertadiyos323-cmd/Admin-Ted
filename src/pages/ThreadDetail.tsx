@@ -89,7 +89,10 @@ export default function ThreadDetail() {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div
+      className="flex flex-col bg-gray-50"
+      style={{ height: 'calc(100vh - 64px - env(safe-area-inset-bottom, 0px))' }}
+    >
       {/* Header */}
       <div className="bg-white border-b border-gray-100 flex items-center gap-3 px-3 py-3 flex-shrink-0">
         <button
