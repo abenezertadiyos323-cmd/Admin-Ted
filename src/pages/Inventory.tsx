@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
-import { Package, Search, X, ChevronDown } from 'lucide-react';
+import { Package, Search, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../../convex/_generated/api';
@@ -14,10 +14,19 @@ const PRODUCT_TABS: { key: ProductType; label: string }[] = [
   { key: 'phone', label: 'Phones' },
   { key: 'accessory', label: 'Accessories' },
 ];
-type SortKey = 'newest' | 'price_asc' | 'price_desc';
 
 // Module-level cache so navigating back to Inventory feels instant
 const productCache: Partial<Record<ProductType, Product[]>> = {};
+const getProductTimestamp = (product: Product): number => {
+  const createdAt = typeof product.createdAt === 'number' ? product.createdAt : undefined;
+  const convexCreationTime =
+    typeof (product as Product & { _creationTime?: number })._creationTime === 'number'
+      ? (product as Product & { _creationTime?: number })._creationTime
+      : undefined;
+  const updatedAt = typeof product.updatedAt === 'number' ? product.updatedAt : undefined;
+
+  return createdAt ?? convexCreationTime ?? updatedAt ?? 0;
+};
 
 function ProductSkeleton() {
   return (
@@ -43,7 +52,6 @@ export default function Inventory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<string[]>(() => getSearchHistory());
   const [searchFocused, setSearchFocused] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [confirmDecrementProduct, setConfirmDecrementProduct] = useState<Product | null>(null);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
@@ -104,11 +112,7 @@ export default function Inventory() {
 
       return matchesBrand && matchesSearch && matchesLowStock;
     })
-    .sort((a, b) => {
-      if (sortKey === 'price_asc') return a.price - b.price;
-      if (sortKey === 'price_desc') return b.price - a.price;
-      return b.createdAt - a.createdAt; // newest first
-    });
+    .sort((a, b) => getProductTimestamp(b) - getProductTimestamp(a));
 
   // Stock management helpers
   const setProductPending = (productId: string, pending: boolean) => {
@@ -144,7 +148,6 @@ export default function Inventory() {
   };
 
   const showHistoryChips = searchFocused && !searchQuery && searchHistory.length > 0;
-  const activeFilterCount = sortKey !== 'newest' ? 1 : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -266,43 +269,6 @@ export default function Inventory() {
           </div>
         )}
 
-        {/* Sort row */}
-        <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
-          {/* Sort dropdown */}
-          <div className="relative flex-shrink-0">
-            <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className={`pl-2.5 pr-6 py-1.5 rounded-xl text-xs font-semibold appearance-none outline-none transition-all cursor-pointer ${
-                sortKey !== 'newest'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              <option value="newest">Newest</option>
-              <option value="price_asc">Price ↑</option>
-              <option value="price_desc">Price ↓</option>
-            </select>
-            <ChevronDown
-              size={11}
-              className={`absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none ${
-                sortKey !== 'newest' ? 'text-white' : 'text-gray-400'
-              }`}
-            />
-          </div>
-
-          {/* Reset all filters */}
-          {activeFilterCount > 0 && (
-            <button
-              onClick={() => {
-                setSortKey('newest');
-              }}
-              className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-gray-200 text-gray-600 transition-all active:scale-95"
-            >
-              Reset ({activeFilterCount})
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Product list */}
