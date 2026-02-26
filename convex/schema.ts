@@ -13,16 +13,6 @@ const ProductType = v.union(
   v.literal("accessory")
 );
 
-const Brand = v.union(
-  v.literal("iPhone"),
-  v.literal("Samsung"),
-  v.literal("Tecno"),
-  v.literal("Infinix"),
-  v.literal("Xiaomi"),
-  v.literal("Oppo"),
-  v.literal("Other")
-);
-
 const Condition = v.union(
   v.literal("New"),
   v.literal("Like New"),
@@ -84,8 +74,7 @@ export default defineSchema({
   ========================= */
   products: defineTable({
     type: ProductType,
-    brand: Brand,
-    model: v.string(),
+    phoneType: v.string(),
 
     ram: v.optional(v.string()),
     storage: v.optional(v.string()),
@@ -93,6 +82,7 @@ export default defineSchema({
 
     price: v.number(),
     stockQuantity: v.number(),
+    lowStockThreshold: v.optional(v.number()),
 
     exchangeEnabled: v.boolean(),
     description: v.optional(v.string()),
@@ -111,13 +101,15 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.string(),
 
-    // Normalized search field: lowercase brand + model + storage + ram + condition.
-    // Optional so legacy rows remain valid until backfillSearchText is run.
+    // Normalized search field: lowercase phoneType + storage + ram + condition.
+    // Optional so legacy rows remain valid until backfillSearchNormalized is run.
     searchText: v.optional(v.string()),
+    // Indexed search field for prefix search: phoneType + storage + ram + condition (lowercase, normalized).
+    // Required for indexed queries; backfill will be needed for legacy rows.
+    searchNormalized: v.string(),
   })
     .index("by_type", ["type"])
-    .index("by_brand", ["brand"])
-    .index("by_type_and_brand", ["type", "brand"])
+    .index("by_type_searchNormalized", ["type", "searchNormalized"])
     .index("by_isArchived_createdAt", ["isArchived", "createdAt"])
     .index("by_archivedAt_and_stockQuantity", ["archivedAt", "stockQuantity"])
     .index("by_archivedAt", ["archivedAt"])
@@ -126,6 +118,21 @@ export default defineSchema({
       "type",
       "exchangeEnabled",
       "archivedAt",
+    ])
+    .index("by_isArchived_stockQuantity_createdAt", [
+      "isArchived",
+      "stockQuantity",
+      "createdAt",
+    ])
+    .index("by_isArchived_exchangeEnabled_createdAt", [
+      "isArchived",
+      "exchangeEnabled",
+      "createdAt",
+    ])
+    .index("by_isArchived_condition_createdAt", [
+      "isArchived",
+      "condition",
+      "createdAt",
     ]),
 
   /* =========================

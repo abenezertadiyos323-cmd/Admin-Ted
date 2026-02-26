@@ -8,16 +8,6 @@ import { v } from "convex/values";
 
 const vProductType = v.union(v.literal("phone"), v.literal("accessory"));
 
-const vBrand = v.union(
-  v.literal("iPhone"),
-  v.literal("Samsung"),
-  v.literal("Tecno"),
-  v.literal("Infinix"),
-  v.literal("Xiaomi"),
-  v.literal("Oppo"),
-  v.literal("Other"),
-);
-
 const vCondition = v.union(
   v.literal("New"),
   v.literal("Like New"),
@@ -35,17 +25,34 @@ function normalizeExchangeEnabled(type: ProductType, exchangeEnabled: boolean) {
 
 /**
  * Build a normalized, lowercase search text from the indexable product fields.
- * Used when inserting or updating a product so listProducts can filter without
- * calling .toLowerCase() on every field at query time.
+ * Used for legacy searchText field. Kept for backward compatibility.
  */
 function buildSearchText(p: {
-  brand: string;
-  model: string;
+  phoneType: string;
   storage?: string;
   ram?: string;
   condition?: string;
 }): string {
-  return [p.brand, p.model, p.storage, p.ram, p.condition]
+  return [p.phoneType, p.storage, p.ram, p.condition]
+    .filter((s): s is string => typeof s === "string" && s.length > 0)
+    .join(" ")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Build a normalized, lowercase search field for indexed prefix queries.
+ * Same normalization as buildSearchText but used for the indexed searchNormalized field.
+ * Enables efficient prefix-based searches like "iphone 13" → matches "iPhone 13 256GB Good".
+ */
+function buildSearchNormalized(p: {
+  phoneType: string;
+  storage?: string;
+  ram?: string;
+  condition?: string;
+}): string {
+  return [p.phoneType, p.storage, p.ram, p.condition]
     .filter((s): s is string => typeof s === "string" && s.length > 0)
     .join(" ")
     .toLowerCase()
@@ -95,6 +102,46 @@ async function resolveThumbnail(
 //  QUERIES
 // ================================================================
 
+const LOW_STOCK_THRESHOLD = 5;
+
+type InventoryTab =
+  | "all"
+  | "in_stock"
+  | "low_stock"
+  | "out_of_stock"
+  | "exchange"
+  | "archived";
+
+const normalizeTab = (tab?: string): InventoryTab => {
+  switch (tab) {
+    case "all":
+      return "all";
+    case "in_stock":
+    case "inStock":
+      return "in_stock";
+    case "low_stock":
+    case "lowStock":
+      return "low_stock";
+    case "out_of_stock":
+    case "outOfStock":
+      return "out_of_stock";
+    case "exchange":
+    case "exchangeEnabled":
+      return "exchange";
+    case "archived":
+      return "archived";
+    default:
+      return "all";
+  }
+};
+
+const normalizeType = (type?: string): ProductType | undefined => {
+  if (type === "phone" || type === "accessory") {
+    return type;
+  }
+  return undefined;
+};
+
 /**
  * List all products with optional filtering.
  * Sorted newest-first using by_isArchived_createdAt index.
@@ -103,24 +150,64 @@ async function resolveThumbnail(
  */
 export const listProducts = query({
   args: {
-    includeArchived: v.optional(v.boolean()),
-    type: v.optional(vProductType),
-    brand: v.optional(vBrand),
-    lowStockOnly: v.optional(v.boolean()),
+    // Primary filter tab — drives isArchived flag and stock constraints.
+    tab: v.optional(v.string()),
+    // Category/type filter.
+    type: v.optional(v.string()),
+    search: v.optional(v.string()),
+    // Advanced filters.
+    condition: v.optional(vCondition),
+    priceMin: v.optional(v.number()),
+    priceMax: v.optional(v.number()),
+    hasImages: v.optional(v.boolean()),
+    // Storage filter: numeric GB value (e.g. 64, 128, 256, 512).
+    // Matched against the storage string field via startsWith.
+    storageGb: v.optional(v.number()),
+    // Full-text search (unchanged behaviour).
     q: v.optional(v.string()),
+    // Legacy params — honoured when tab is absent for backward compatibility.
+    includeArchived: v.optional(v.boolean()),
+    lowStockOnly: v.optional(v.boolean()),
   },
-  handler: async (ctx, { includeArchived, type, brand, lowStockOnly, q }) => {
-    const indexedProducts = await ctx.db
-      .query("products")
-      .withIndex("by_isArchived_createdAt", (qb) =>
-        includeArchived
-          ? qb.gte("isArchived", false) // all: false then true
-          : qb.eq("isArchived", false)
-      )
-      .order("desc")
-      .collect();
+  handler: async (
+    ctx,
+    { tab, type, search, condition, priceMin, priceMax, hasImages, storageGb, q,
+      includeArchived, lowStockOnly },
+  ) => {
+    const normalizedTab = normalizeTab(tab);
+    const resolvedType = normalizeType(type);
+    const includeArchivedLegacy = !tab && includeArchived === true;
+    const normalizedSearch = (search ?? q)?.toLowerCase().replace(/\s+/g, " ").trim();
+    const isArchivedTab = normalizedTab === "archived";
 
-    // Compatibility: legacy rows created before isArchived existed may be absent from this index.
+    // Choose the most specific available index for the initial fetch.
+    let indexedProducts;
+    if (normalizedTab === "exchange") {
+      // Index covers isArchived=false AND exchangeEnabled=true together.
+      indexedProducts = await ctx.db
+        .query("products")
+        .withIndex("by_isArchived_exchangeEnabled_createdAt", (qb) =>
+          qb.eq("isArchived", false).eq("exchangeEnabled", true),
+        )
+        .order("desc")
+        .collect();
+    } else {
+      // Default: filter by isArchived only.
+      indexedProducts = await ctx.db
+        .query("products")
+        .withIndex("by_isArchived_createdAt", (qb) =>
+          tab
+            ? qb.eq("isArchived", isArchivedTab)
+            : includeArchivedLegacy
+              ? qb.gte("isArchived", false) // legacy: include both
+              : qb.eq("isArchived", false),
+        )
+        .order("desc")
+        .collect();
+    }
+
+    // Compatibility: legacy rows created before isArchived existed may be
+    // absent from the index. Treat them as non-archived.
     const legacyProducts = (await ctx.db.query("products").collect())
       .filter((p) => (p as { isArchived?: boolean }).isArchived === undefined)
       .map((p) => ({ ...p, isArchived: false }));
@@ -130,29 +217,56 @@ export const listProducts = query({
       new Map(merged.map((p) => [p._id, p])).values(),
     ).sort((a, b) => b.createdAt - a.createdAt);
 
-    let products = includeArchived
-      ? deduped
-      : deduped.filter((p) => p.isArchived === false);
+    // Authoritative isArchived gate — handles legacy products that bypassed index.
+    let products =
+      normalizedTab === "archived"
+        ? deduped.filter((p) => p.isArchived === true)
+        : includeArchivedLegacy
+          ? deduped
+          : deduped.filter((p) => p.isArchived === false);
 
-    if (type) products = products.filter((p) => p.type === type);
-    if (brand) products = products.filter((p) => p.brand === brand);
-    if (lowStockOnly) products = products.filter((p) => p.stockQuantity <= 2);
-    if (q) {
-      // Normalize the query the same way buildSearchText normalizes stored values.
-      const ql = q.toLowerCase().replace(/\s+/g, " ").trim();
-      // Hard cap: consider only the newest 300 post-structural-filter candidates.
-      // This prevents an unbounded in-memory scan when q is provided.
+    // --- Tab stock constraints ---
+    if (normalizedTab === "in_stock") {
+      products = products.filter((p) => p.stockQuantity > 0);
+    } else if (normalizedTab === "out_of_stock") {
+      products = products.filter((p) => p.stockQuantity === 0);
+    } else if (normalizedTab === "low_stock") {
+      products = products.filter(
+        (p) =>
+          p.stockQuantity > 0 &&
+          p.stockQuantity <= (p.lowStockThreshold ?? LOW_STOCK_THRESHOLD),
+      );
+    } else if (normalizedTab === "exchange") {
+      products = products.filter((p) => p.exchangeEnabled === true);
+    }
+    // "exchange" is pre-filtered by index; in-memory filter above keeps it safe.
+
+    // Legacy lowStockOnly (honoured only when tab is absent).
+    if (!tab && lowStockOnly) {
+      products = products.filter((p) => p.stockQuantity <= 2);
+    }
+
+    // --- Advanced filters (applied in-memory after index fetch) ---
+    if (resolvedType) products = products.filter((p) => p.type === resolvedType);
+    if (condition) products = products.filter((p) => p.condition === condition);
+    if (priceMin !== undefined) products = products.filter((p) => p.price >= priceMin);
+    if (priceMax !== undefined) products = products.filter((p) => p.price <= priceMax);
+    if (hasImages) products = products.filter((p) => p.images.length > 0);
+    if (storageGb !== undefined) {
+      const storageStr = String(storageGb);
+      products = products.filter((p) => p.storage?.startsWith(storageStr) ?? false);
+    }
+
+    // --- Text search (hard-capped to avoid unbounded in-memory scans) ---
+    if (normalizedSearch) {
       const candidates = products.slice(0, 300);
       products = candidates.filter((p) => {
-        // Fall back to inline concat for products not yet backfilled.
-        const st =
-          p.searchText ??
-          `${p.brand} ${p.model}`.toLowerCase();
-        return st.includes(ql);
+        const st = p.searchText ?? p.phoneType.toLowerCase();
+        return st.includes(normalizedSearch);
       });
     }
 
-    // Resolve thumbnail URL only
+    // Resolve thumbnail URL only.
     return Promise.all(
       products.map(async (p) => ({
         ...p,
@@ -186,8 +300,7 @@ export const getProductById = query({
 export const createProduct = mutation({
   args: {
     type: vProductType,
-    brand: vBrand,
-    model: v.string(),
+    phoneType: v.string(),
     ram: v.optional(v.string()),
     storage: v.optional(v.string()),
     condition: v.optional(vCondition),
@@ -207,6 +320,7 @@ export const createProduct = mutation({
       exchangeEnabled,
       isArchived: false,
       searchText: buildSearchText(args),
+      searchNormalized: buildSearchNormalized(args),
       createdAt: now,
       updatedAt: now,
     });
@@ -221,8 +335,7 @@ export const updateProduct = mutation({
   args: {
     productId: v.id("products"),
     type: v.optional(vProductType),
-    brand: v.optional(vBrand),
-    model: v.optional(v.string()),
+    phoneType: v.optional(v.string()),
     ram: v.optional(v.string()),
     storage: v.optional(v.string()),
     condition: v.optional(vCondition),
@@ -246,19 +359,21 @@ export const updateProduct = mutation({
       effectiveExchangeEnabled,
     );
 
-    // Recompute searchText using the merged (effective) field values.
-    const searchText = buildSearchText({
-      brand: patch.brand ?? existing.brand,
-      model: patch.model ?? existing.model,
+    // Recompute searchText and searchNormalized using the merged (effective) field values.
+    const searchFieldArgs = {
+      phoneType: patch.phoneType ?? existing.phoneType,
       storage: patch.storage ?? existing.storage,
       ram: patch.ram ?? existing.ram,
       condition: patch.condition ?? existing.condition,
-    });
+    };
+    const searchText = buildSearchText(searchFieldArgs);
+    const searchNormalized = buildSearchNormalized(searchFieldArgs);
 
     await ctx.db.patch(productId, {
       ...patch,
       exchangeEnabled: normalizedExchangeEnabled,
       searchText,
+      searchNormalized,
       updatedAt: Date.now(),
       updatedBy,
     });
@@ -336,8 +451,7 @@ export const backfillSearchText = mutation({
       if (!p.searchText) {
         await ctx.db.patch(p._id, {
           searchText: buildSearchText({
-            brand: p.brand,
-            model: p.model,
+            phoneType: p.phoneType,
             storage: p.storage,
             ram: p.ram,
             condition: p.condition,
@@ -347,6 +461,66 @@ export const backfillSearchText = mutation({
       }
     }
     return { backfilled: count };
+  },
+});
+
+/**
+ * One-time backfill: compute and store searchNormalized for every product that
+ * doesn't have it yet (i.e. created before this field was introduced).
+ * Run once from the Convex dashboard: call products:backfillSearchNormalized with {}.
+ * Safe to re-run — skips rows that already have a non-empty searchNormalized.
+ */
+export const backfillSearchNormalized = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("products").collect();
+    let count = 0;
+    for (const p of all) {
+      if (!p.searchNormalized) {
+        await ctx.db.patch(p._id, {
+          searchNormalized: buildSearchNormalized({
+            phoneType: p.phoneType,
+            storage: p.storage,
+            ram: p.ram,
+            condition: p.condition,
+          }),
+        });
+        count++;
+      }
+    }
+    return { backfilled: count };
+  },
+});
+
+/**
+ * One-time migration: merges legacy brand + model into the new phoneType field.
+ * For each product that has brand/model but no phoneType, writes:
+ *   phoneType = brand + " " + model
+ * Safe to re-run — skips rows that already have a non-empty phoneType.
+ * Run once from the Convex dashboard: call products:migratePhoneType with {}.
+ */
+export const migratePhoneType = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("products").collect();
+    let count = 0;
+    for (const p of all) {
+      const legacy = p as unknown as { brand?: string; model?: string; phoneType?: string };
+      if (!legacy.phoneType && legacy.brand && legacy.model) {
+        const phoneType = `${legacy.brand} ${legacy.model}`.trim();
+        await ctx.db.patch(p._id, {
+          phoneType,
+          searchText: buildSearchText({
+            phoneType,
+            storage: p.storage,
+            ram: p.ram,
+            condition: p.condition,
+          }),
+        });
+        count++;
+      }
+    }
+    return { migrated: count };
   },
 });
 
