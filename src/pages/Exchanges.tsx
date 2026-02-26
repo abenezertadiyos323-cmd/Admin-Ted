@@ -62,7 +62,10 @@ export default function Exchanges() {
         <TabBar
           tabs={tabs}
           activeTab={activeTab}
-          onTabChange={(key) => setActiveTab(key as ThreadCategory)}
+          onTabChange={(key) => {
+            setLoading(true);
+            setActiveTab(key as ThreadCategory);
+          }}
         />
       </div>
 

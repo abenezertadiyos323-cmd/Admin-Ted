@@ -51,12 +51,12 @@ export default function Settings() {
             <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
           </button>
 
-          <div className="px-4 py-3.5 border-b border-gray-50">
+          <div className="px-4 py-3.5 border-b border-gray-50 cursor-default">
             <p className="text-sm font-medium text-gray-800">App Version</p>
             <p className="text-xs text-gray-400 truncate">{APP_VERSION}</p>
           </div>
 
-          <div className="px-4 py-3.5">
+          <div className="px-4 py-3.5 cursor-default">
             <p className="text-sm font-medium text-gray-800">Admin Profile</p>
             <p className="text-xs text-gray-400 truncate">{adminLabel}</p>
           </div>

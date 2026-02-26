@@ -66,7 +66,10 @@ export default function Inbox() {
         <TabBar
           tabs={tabs}
           activeTab={activeTab}
-          onTabChange={(key) => setActiveTab(key as ThreadCategory | 'all')}
+          onTabChange={(key) => {
+            setLoading(true);
+            setActiveTab(key as ThreadCategory | 'all');
+          }}
         />
       </div>
 

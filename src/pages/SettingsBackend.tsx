@@ -10,7 +10,7 @@ export default function SettingsBackend() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <PageHeader title="Backend Status" subtitle={backendInfo.status} showBack />
+      <PageHeader title="Backend Status" subtitle={backendInfo.status} showBack backTo="/settings" />
 
       <div className="px-4 py-4">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">

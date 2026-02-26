@@ -152,7 +152,7 @@ export default function Dashboard() {
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-start gap-3 px-4 py-3 ${
+                    className={`flex items-start gap-3 px-4 py-3 cursor-default ${
                       idx < activity.length - 1 ? 'border-b border-gray-50' : ''
                     }`}
                   >

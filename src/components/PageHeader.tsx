@@ -6,10 +6,11 @@ interface PageHeaderProps {
   title: string;
   subtitle?: string;
   showBack?: boolean;
+  backTo?: string;
   rightAction?: ReactNode;
 }
 
-export default function PageHeader({ title, subtitle, showBack = false, rightAction }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, showBack = false, backTo, rightAction }: PageHeaderProps) {
   const navigate = useNavigate();
 
   return (
@@ -17,7 +18,7 @@ export default function PageHeader({ title, subtitle, showBack = false, rightAct
       <div className="flex items-center gap-3 h-14">
         {showBack && (
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => (backTo ? navigate(backTo) : navigate(-1))}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors -ml-1"
           >
             <ChevronLeft size={22} className="text-gray-700" />
