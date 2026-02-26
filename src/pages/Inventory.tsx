@@ -15,7 +15,6 @@ const PRODUCT_TABS: { key: ProductType; label: string }[] = [
   { key: 'accessory', label: 'Accessories' },
 ];
 type SortKey = 'newest' | 'price_asc' | 'price_desc';
-type ExchangeFilter = 'all' | 'on' | 'off';
 
 // Module-level cache so navigating back to Inventory feels instant
 const productCache: Partial<Record<ProductType, Product[]>> = {};
@@ -45,7 +44,6 @@ export default function Inventory() {
   const [searchHistory, setSearchHistory] = useState<string[]>(() => getSearchHistory());
   const [searchFocused, setSearchFocused] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('newest');
-  const [filterExchange, setFilterExchange] = useState<ExchangeFilter>('all');
   const [confirmDecrementProduct, setConfirmDecrementProduct] = useState<Product | null>(null);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
@@ -103,12 +101,8 @@ export default function Inventory() {
         p.brand.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesLowStock = !isLowStock || p.stockQuantity <= 2;
-      const matchesExchange =
-        filterExchange === 'all' ||
-        (filterExchange === 'on' && p.exchangeEnabled) ||
-        (filterExchange === 'off' && !p.exchangeEnabled);
 
-      return matchesBrand && matchesSearch && matchesLowStock && matchesExchange;
+      return matchesBrand && matchesSearch && matchesLowStock;
     })
     .sort((a, b) => {
       if (sortKey === 'price_asc') return a.price - b.price;
@@ -150,9 +144,7 @@ export default function Inventory() {
   };
 
   const showHistoryChips = searchFocused && !searchQuery && searchHistory.length > 0;
-  const activeFilterCount =
-    (filterExchange !== 'all' ? 1 : 0) +
-    (sortKey !== 'newest' ? 1 : 0);
+  const activeFilterCount = sortKey !== 'newest' ? 1 : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -274,7 +266,7 @@ export default function Inventory() {
           </div>
         )}
 
-        {/* Sort + quick filters row */}
+        {/* Sort row */}
         <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
           {/* Sort dropdown */}
           <div className="relative flex-shrink-0">
@@ -299,34 +291,11 @@ export default function Inventory() {
             />
           </div>
 
-          {/* Exchange quick filter — cycles all → on → off */}
-          <button
-            onClick={() =>
-              setFilterExchange((prev) =>
-                prev === 'all' ? 'on' : prev === 'on' ? 'off' : 'all',
-              )
-            }
-            className={`flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              filterExchange === 'on'
-                ? 'bg-green-500 text-white'
-                : filterExchange === 'off'
-                  ? 'bg-red-400 text-white'
-                  : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {filterExchange === 'on'
-              ? '✓ Exchange'
-              : filterExchange === 'off'
-                ? '✗ Exchange'
-                : 'Exchange'}
-          </button>
-
           {/* Reset all filters */}
           {activeFilterCount > 0 && (
             <button
               onClick={() => {
                 setSortKey('newest');
-                setFilterExchange('all');
               }}
               className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-gray-200 text-gray-600 transition-all active:scale-95"
             >
