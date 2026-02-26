@@ -99,12 +99,19 @@ export default function ProductForm() {
         condition: existingProduct.condition ?? '',
         price: existingProduct.price,
         stockQuantity: String(existingProduct.stockQuantity),
-        exchangeEnabled: existingProduct.exchangeEnabled,
+        exchangeEnabled: existingProduct.type === 'phone' ? existingProduct.exchangeEnabled : false,
         description: existingProduct.description ?? '',
       });
       setPriceText(existingProduct.price > 0 ? formatPriceForInput(existingProduct.price) : '');
     }
   }, [existingProduct]);
+
+  // Accessories never support exchange, so clear any stale truthy state.
+  useEffect(() => {
+    if (form.type === 'accessory' && form.exchangeEnabled) {
+      setForm((prev) => ({ ...prev, exchangeEnabled: false }));
+    }
+  }, [form.type, form.exchangeEnabled]);
 
   // ---- Convex mutations ----
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
@@ -184,7 +191,7 @@ export default function ProductForm() {
         condition: (form.condition as Condition) || undefined,
         price: form.price ?? 0,
         stockQuantity: Number(form.stockQuantity),
-        exchangeEnabled: form.exchangeEnabled,
+        exchangeEnabled: form.type === 'phone' ? form.exchangeEnabled : false,
         description: form.description || undefined,
         images: allImages,
         updatedBy: String(user.id),
@@ -218,7 +225,13 @@ export default function ProductForm() {
   };
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value } as FormData;
+      if (key === 'type' && value === 'accessory') {
+        next.exchangeEnabled = false;
+      }
+      return next;
+    });
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
@@ -454,38 +467,40 @@ export default function ProductForm() {
           </div>
 
           {/* Exchange Available — segmented pill toggle */}
-          <div>
-            <p className="text-sm font-semibold text-gray-800 mb-2">Exchange Available</p>
-            <div className="flex rounded-2xl border border-gray-200 bg-gray-100 p-1 gap-1">
-              <button
-                type="button"
-                onClick={() => update('exchangeEnabled', false)}
-                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                  !form.exchangeEnabled
-                    ? 'bg-red-500 text-white shadow-sm'
-                    : 'text-gray-400'
-                }`}
-              >
-                Exchange OFF
-              </button>
-              <button
-                type="button"
-                onClick={() => update('exchangeEnabled', true)}
-                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                  form.exchangeEnabled
-                    ? 'bg-green-500 text-white shadow-sm'
-                    : 'text-gray-400'
-                }`}
-              >
-                Exchange ON
-              </button>
+          {isPhone && (
+            <div>
+              <p className="text-sm font-semibold text-gray-800 mb-2">Exchange Available</p>
+              <div className="flex rounded-2xl border border-gray-200 bg-gray-100 p-1 gap-1">
+                <button
+                  type="button"
+                  onClick={() => update('exchangeEnabled', false)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                    !form.exchangeEnabled
+                      ? 'bg-red-500 text-white shadow-sm'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  Exchange OFF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => update('exchangeEnabled', true)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                    form.exchangeEnabled
+                      ? 'bg-green-500 text-white shadow-sm'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  Exchange ON
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5 px-0.5">
+                {form.exchangeEnabled
+                  ? '✓ Customers can submit trade-in requests for this phone'
+                  : 'This phone is not available for exchange or trade-in'}
+              </p>
             </div>
-            <p className="text-[11px] text-gray-400 mt-1.5 px-0.5">
-              {form.exchangeEnabled
-                ? '✓ Customers can submit trade-in requests for this phone'
-                : 'This phone is not available for exchange or trade-in'}
-            </p>
-          </div>
+          )}
         </div>
 
         {/* Description */}

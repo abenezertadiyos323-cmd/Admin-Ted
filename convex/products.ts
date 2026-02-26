@@ -27,6 +27,12 @@ const vCondition = v.union(
   v.literal("Poor"),
 );
 
+type ProductType = "phone" | "accessory";
+
+function normalizeExchangeEnabled(type: ProductType, exchangeEnabled: boolean) {
+  return type === "phone" ? exchangeEnabled : false;
+}
+
 // Image stored in DB: only storageId + order. url is computed at query time.
 const vImageInput = v.object({
   storageId: v.id("_storage"),
@@ -160,8 +166,10 @@ export const createProduct = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const exchangeEnabled = normalizeExchangeEnabled(args.type, args.exchangeEnabled);
     return await ctx.db.insert("products", {
       ...args,
+      exchangeEnabled,
       isArchived: false,
       createdAt: now,
       updatedAt: now,
@@ -190,8 +198,21 @@ export const updateProduct = mutation({
     updatedBy: v.string(),
   },
   handler: async (ctx, { productId, updatedBy, ...patch }) => {
+    const existing = await ctx.db.get(productId);
+    if (!existing) {
+      throw new Error("Product not found");
+    }
+
+    const effectiveType: ProductType = patch.type ?? existing.type;
+    const effectiveExchangeEnabled = patch.exchangeEnabled ?? existing.exchangeEnabled;
+    const normalizedExchangeEnabled = normalizeExchangeEnabled(
+      effectiveType,
+      effectiveExchangeEnabled,
+    );
+
     await ctx.db.patch(productId, {
       ...patch,
+      exchangeEnabled: normalizedExchangeEnabled,
       updatedAt: Date.now(),
       updatedBy,
     });
