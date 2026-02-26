@@ -14,8 +14,8 @@ export default function Settings() {
   const user = getTelegramUser();
   const backendInfo = getBackendInfo(CONVEX_URL);
   const backendSubtitle = backendInfo.label
-    ? `${backendInfo.status} - ${backendInfo.label}`
-    : backendInfo.status;
+    ? `${backendInfo.environment} - ${backendInfo.label}`
+    : backendInfo.environment;
 
   const adminLabel = user.username
     ? `@${user.username} (ID: ${user.id})`
