@@ -58,6 +58,7 @@ export default function ProductForm() {
   const defaultType = (searchParams.get('type') as ProductType) || 'phone';
 
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({
     type: defaultType,
     brand: 'iPhone',
@@ -158,7 +159,7 @@ export default function ProductForm() {
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!form.model.trim()) newErrors.model = 'Model is required';
-    if (form.price === null || form.price <= 0) newErrors.price = 'Valid price required';
+    if (form.price === null || !Number.isFinite(form.price) || form.price <= 0) newErrors.price = 'Valid price required';
     if (!form.stockQuantity || Number(form.stockQuantity) < 0) newErrors.stockQuantity = 'Valid quantity required';
     if (form.type === 'phone' && !form.storage) newErrors.storage = 'Storage required for phones';
     if (form.type === 'phone' && !form.condition) newErrors.condition = 'Condition required for phones';
@@ -168,7 +169,18 @@ export default function ProductForm() {
 
   // ---- Save: upload images then create / update product ----
   const handleSave = async () => {
+    setSaveError(null);
     if (!validate()) return;
+
+    // Safety net: re-derive price directly from the displayed priceText string.
+    // This guarantees we never send NaN, null, or a comma-formatted string to Convex
+    // even if form.price somehow desynchronised from priceText.
+    const safePrice = parsePriceInput(priceText);
+    if (safePrice === null || !Number.isFinite(safePrice) || safePrice <= 0) {
+      setErrors((prev) => ({ ...prev, price: 'Valid price required' }));
+      return;
+    }
+
     setSaving(true);
     try {
       // 1. Upload any newly-selected images to Convex Storage
@@ -189,7 +201,7 @@ export default function ProductForm() {
         ram: form.ram || undefined,
         storage: form.storage || undefined,
         condition: (form.condition as Condition) || undefined,
-        price: form.price ?? 0,
+        price: safePrice,
         stockQuantity: Number(form.stockQuantity),
         exchangeEnabled: form.type === 'phone' ? form.exchangeEnabled : false,
         description: form.description || undefined,
@@ -204,7 +216,10 @@ export default function ProductForm() {
       }
       navigate('/inventory');
     } catch (err) {
-      console.error(err);
+      console.error('[ProductForm] save failed:', err);
+      setSaveError(
+        err instanceof Error ? err.message : 'Save failed — please try again.',
+      );
     } finally {
       setSaving(false);
     }
@@ -233,6 +248,7 @@ export default function ProductForm() {
       return next;
     });
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+    if (saveError) setSaveError(null);
   };
 
   const handlePriceChange = (value: string) => {
@@ -516,6 +532,13 @@ export default function ProductForm() {
             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
+
+        {/* Save error banner */}
+        {saveError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 font-medium">
+            {saveError}
+          </div>
+        )}
 
         {/* Primary Save button — full width, below Description */}
         <button
