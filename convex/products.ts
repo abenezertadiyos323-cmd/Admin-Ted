@@ -555,3 +555,28 @@ export const backfillIsArchived = mutation({
     return { backfilled: count };
   },
 });
+
+/**
+ * One-time cleanup: removes legacy brand/model fields from product documents
+ * that were created before the phoneType migration.
+ * Run once from the Convex dashboard after migratePhoneType has been run.
+ * Safe to re-run — skips rows that have neither field.
+ */
+export const cleanupLegacyBrandModel = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const products = await ctx.db.query("products").collect();
+    let cleaned = 0;
+
+    for (const p of products) {
+      const hasBrand = (p as any).brand !== undefined;
+      const hasModel = (p as any).model !== undefined;
+      if (hasBrand || hasModel) {
+        await ctx.db.patch(p._id, { brand: undefined, model: undefined } as any);
+        cleaned++;
+      }
+    }
+
+    return { cleaned };
+  },
+});
