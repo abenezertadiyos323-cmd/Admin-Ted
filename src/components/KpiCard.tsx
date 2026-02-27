@@ -41,15 +41,7 @@ function KpiCardContent({
   return (
     <>
       {/* Title: wraps up to 2 lines, never truncates */}
-      <p
-        className="text-xs text-gray-500 font-medium leading-snug"
-        style={{
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical' as const,
-          overflow: 'hidden',
-        }}
-      >
+      <p className="text-xs text-gray-500 font-medium leading-snug">
         {title}
       </p>
       {/* Big number */}
