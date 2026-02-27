@@ -166,6 +166,7 @@ export default defineSchema({
 
     createdAt: v.number(),
     updatedAt: v.number(),
+    firstMessageAt: v.optional(v.number()),
   })
     .index("by_telegramId", ["telegramId"])
     .index("by_status", ["status"])
@@ -179,6 +180,11 @@ export default defineSchema({
   messages: defineTable({
     threadId: v.id("threads"),
     sender: MessageSender,
+    senderRole: v.optional(v.union(
+      v.literal("customer"),
+      v.literal("admin"),
+      v.literal("bot")
+    )),
     senderTelegramId: v.string(),
     text: v.string(),
     exchangeId: v.optional(v.id("exchanges")),
