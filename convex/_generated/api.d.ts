@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as dashboard from "../dashboard.js";
 import type * as files from "../files.js";
 import type * as products from "../products.js";
 
@@ -18,6 +19,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  dashboard: typeof dashboard;
   files: typeof files;
   products: typeof products;
 }>;
