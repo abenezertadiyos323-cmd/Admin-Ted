@@ -28,7 +28,7 @@ function normalizeExchangeEnabled(type: ProductType, exchangeEnabled: boolean) {
  * Used for legacy searchText field. Kept for backward compatibility.
  */
 function buildSearchText(p: {
-  phoneType: string;
+  phoneType?: string;
   storage?: string;
   ram?: string;
   condition?: string;
@@ -47,7 +47,7 @@ function buildSearchText(p: {
  * Enables efficient prefix-based searches like "iphone 13" → matches "iPhone 13 256GB Good".
  */
 function buildSearchNormalized(p: {
-  phoneType: string;
+  phoneType?: string;
   storage?: string;
   ram?: string;
   condition?: string;

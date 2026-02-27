@@ -101,7 +101,7 @@ export default function ProductForm() {
       formPopulated.current = true;
       setForm({
         type: existingProduct.type,
-        phoneType: existingProduct.phoneType,
+        phoneType: existingProduct.phoneType ?? '',
         ram: existingProduct.ram ?? '',
         storage: existingProduct.storage ?? '',
         condition: existingProduct.condition ?? '',

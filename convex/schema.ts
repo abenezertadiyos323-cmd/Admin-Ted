@@ -74,7 +74,9 @@ export default defineSchema({
   ========================= */
   products: defineTable({
     type: ProductType,
-    phoneType: v.string(),
+    // optional so legacy rows (brand+model, no phoneType) pass schema validation;
+    // run products:migratePhoneType to backfill, then make required again.
+    phoneType: v.optional(v.string()),
 
     ram: v.optional(v.string()),
     storage: v.optional(v.string()),
@@ -105,8 +107,13 @@ export default defineSchema({
     // Optional so legacy rows remain valid until backfillSearchNormalized is run.
     searchText: v.optional(v.string()),
     // Indexed search field for prefix search: phoneType + storage + ram + condition (lowercase, normalized).
-    // Required for indexed queries; backfill will be needed for legacy rows.
-    searchNormalized: v.string(),
+    // optional so legacy rows pass schema validation; run products:backfillSearchNormalized then make required.
+    searchNormalized: v.optional(v.string()),
+
+    // Legacy fields kept so rows created before the phoneType migration pass schema validation.
+    // Run products:cleanupLegacyBrandModel to remove them from documents, then remove these lines.
+    brand: v.optional(v.string()),
+    model: v.optional(v.string()),
   })
     .index("by_type", ["type"])
     .index("by_type_searchNormalized", ["type", "searchNormalized"])
