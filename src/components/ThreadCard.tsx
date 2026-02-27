@@ -25,7 +25,7 @@ export default function ThreadCard({ thread, onClick }: ThreadCardProps) {
   return (
     <button
       onClick={onClick}
-      className="bg-white w-full flex items-center gap-3 px-4 py-3 text-left active:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+      className="bg-white w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 active:bg-slate-50 border-b border-black/5 last:border-b-0"
     >
       {/* Avatar */}
       <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm ${avatarColors[colorIdx]}`}>
@@ -35,21 +35,21 @@ export default function ThreadCard({ thread, onClick }: ThreadCardProps) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <span className={`text-sm ${isUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
+          <span className={`text-sm ${isUnread ? 'font-bold text-slate-900' : 'font-medium text-slate-800'}`}>
             {fullName}
           </span>
-          <span className="text-[11px] text-gray-400 flex-shrink-0 ml-2">
+          <span className="text-[11px] text-slate-400 flex-shrink-0 ml-2">
             {formatRelativeTime(thread.lastMessageAt)}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <p className={`text-xs truncate flex-1 ${isUnread ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+          <p className={`text-xs truncate flex-1 ${isUnread ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
             {thread.lastMessagePreview
               ? truncate(thread.lastMessagePreview, 50)
               : 'No messages yet'}
           </p>
           {isUnread && (
-            <span className="ml-2 flex-shrink-0 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+            <span className="ml-2 flex-shrink-0 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
               {thread.unreadCount > 9 ? '9+' : thread.unreadCount}
             </span>
           )}

@@ -85,10 +85,10 @@ export function getCategoryColor(category: string): {
   border: string;
 } {
   switch (category) {
-    case 'hot': return { color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' };
+    case 'hot': return { color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' };
     case 'warm': return { color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' };
-    case 'cold': return { color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' };
-    default: return { color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200' };
+    case 'cold': return { color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200' };
+    default: return { color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200' };
   }
 }
 

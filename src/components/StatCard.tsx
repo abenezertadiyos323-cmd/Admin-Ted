@@ -22,8 +22,8 @@ export default function StatCard({
   return (
     <button
       onClick={onClick}
-      className={`bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100 w-full text-left transition-all active:scale-95 ${
-        onClick ? 'cursor-pointer hover:shadow-md' : 'cursor-default'
+      className={`bg-white rounded-xl p-4 flex items-center gap-3 shadow-sm border border-black/5 w-full text-left transition-all duration-150 active:scale-[0.99] ${
+        onClick ? 'cursor-pointer hover:shadow-sm' : 'cursor-default'
       }`}
     >
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>

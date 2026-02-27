@@ -14,7 +14,7 @@ export default function PageHeader({ title, subtitle, showBack = false, backTo, 
   const navigate = useNavigate();
 
   return (
-    <div className="bg-white border-b border-gray-100 px-4 pt-safe-top">
+    <div className="bg-white/95 backdrop-blur-sm sticky top-0 z-40 border-b border-gray-100 px-4 pt-safe-top">
       <div className="flex items-center gap-3 h-14">
         {showBack && (
           <button

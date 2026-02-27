@@ -14,7 +14,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
   return (
     <button
       onClick={onClick}
-      className="bg-white rounded-2xl p-3 flex items-center gap-3 shadow-sm border border-gray-100 w-full text-left active:scale-[0.98] transition-transform"
+      className="card-interactive p-3 flex items-center gap-3 w-full text-left"
     >
       {/* Image */}
       <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">

@@ -30,9 +30,8 @@ export default function FloatingActionButton() {
       {/* FAB button */}
       <button
         onClick={handleToggle}
-        className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] right-4 z-40 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 active:scale-90 ${
-          open ? 'bg-gray-800' : 'bg-blue-600 hover:bg-blue-700'
-        }`}
+        className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] right-4 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 active:scale-95 ${open ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
         aria-label="Add product"
       >
         <Plus
@@ -67,10 +66,10 @@ export default function FloatingActionButton() {
               <div className="space-y-2.5">
                 <button
                   onClick={handleAddPhone}
-                  className="w-full flex items-center gap-4 bg-gray-50 hover:bg-blue-50 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-all"
+                  className="w-full flex items-center gap-4 bg-slate-50 hover:bg-indigo-50 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-all"
                 >
-                  <span className="w-11 h-11 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <Smartphone size={22} className="text-blue-600" />
+                  <span className="w-11 h-11 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    <Smartphone size={22} className="text-indigo-600" />
                   </span>
                   <div>
                     <p className="text-sm font-bold text-gray-900">Add Phone</p>

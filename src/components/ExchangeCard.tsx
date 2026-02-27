@@ -16,7 +16,7 @@ export default function ExchangeCard({ exchange, onClick }: ExchangeCardProps) {
   return (
     <button
       onClick={onClick}
-      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 w-full text-left active:scale-[0.98] transition-transform"
+      className="card-interactive p-4 w-full text-left"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
