@@ -9,6 +9,7 @@ export default function Layout() {
       <main
         className="flex-1 overflow-y-auto"
         style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+        data-scroll-container="true"
       >
         <Outlet />
       </main>

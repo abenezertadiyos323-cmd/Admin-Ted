@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { initTelegram } from "./lib/telegram";
 import Layout from "./components/Layout";
+import ScrollToTop from "./components/ScrollToTop";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import ProductForm from "./pages/ProductForm";
@@ -20,6 +21,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
