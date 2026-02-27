@@ -186,13 +186,19 @@ export default defineSchema({
     senderTelegramId: v.string(),
     text: v.string(),
     exchangeId: v.optional(v.id("exchanges")),
+    // Idempotency: "<chatId>:<messageId>" — unique per Telegram chat+message
+    telegramMessageId: v.optional(v.string()),
+    // Media: Telegram file_id stored at ingest; URL resolved on demand via getFile API
+    mediaFileId: v.optional(v.string()),
+    mediaType: v.optional(v.string()), // "photo" | "document" | "voice" | etc.
     createdAt: v.number(),
   })
     .index("by_threadId", ["threadId"])
     .index("by_threadId_and_createdAt", ["threadId", "createdAt"])
     .index("by_sender_and_createdAt", ["sender", "createdAt"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_exchangeId", ["exchangeId"]),
+    .index("by_exchangeId", ["exchangeId"])
+    .index("by_telegramMessageId", ["telegramMessageId"]),
 
   /* =========================
      EXCHANGES
