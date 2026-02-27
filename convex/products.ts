@@ -87,9 +87,16 @@ async function resolveThumbnail(
   ctx: { storage: { getUrl: (id: string) => Promise<string | null> } },
   images: Array<{ storageId: string; order: number }>,
 ) {
-  if (images.length === 0) return [];
+  if (!Array.isArray(images) || images.length === 0) return [];
   const sorted = [...images].sort((a, b) => a.order - b.order);
-  const url = (await ctx.storage.getUrl(sorted[0].storageId)) ?? "";
+  let url = "";
+  if (sorted[0].storageId && typeof sorted[0].storageId === "string") {
+    try {
+      url = (await ctx.storage.getUrl(sorted[0].storageId)) ?? "";
+    } catch {
+      url = "";
+    }
+  }
   return sorted.map((img, index) => ({
     storageId: img.storageId,
     order: img.order,
@@ -259,7 +266,7 @@ export const listProducts = query({
     if (condition) products = products.filter((p) => p.condition === condition);
     if (priceMin !== undefined) products = products.filter((p) => p.price >= priceMin);
     if (priceMax !== undefined) products = products.filter((p) => p.price <= priceMax);
-    if (hasImages) products = products.filter((p) => p.images.length > 0);
+    if (hasImages) products = products.filter((p) => Array.isArray(p.images) && p.images.length > 0);
     if (storageGb !== undefined) {
       const storageStr = String(storageGb);
       products = products.filter((p) => p.storage?.startsWith(storageStr) ?? false);
@@ -269,17 +276,22 @@ export const listProducts = query({
     if (normalizedSearch) {
       const candidates = products.slice(0, 300);
       products = candidates.filter((p) => {
-        const st = p.searchText ?? p.phoneType.toLowerCase();
+        const st = p.searchText ?? (p.phoneType ? p.phoneType.toLowerCase() : "");
         return st.includes(normalizedSearch);
       });
     }
 
-    // Resolve thumbnail URL only.
+    // Resolve thumbnail URL only. Per-row errors are swallowed so one bad row
+    // cannot crash the entire query — the row is returned with images: [].
     return Promise.all(
-      products.map(async (p) => ({
-        ...p,
-        images: await resolveThumbnail(ctx, p.images),
-      })),
+      products.map(async (p) => {
+        try {
+          const safeImages = Array.isArray(p.images) ? p.images : [];
+          return { ...p, images: await resolveThumbnail(ctx, safeImages) };
+        } catch {
+          return { ...p, images: [] };
+        }
+      }),
     );
   },
 });
