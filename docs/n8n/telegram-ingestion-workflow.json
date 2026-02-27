@@ -1,0 +1,102 @@
+{
+  "name": "Telegram → Convex Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "replace-with-your-webhook-id",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─────────────────────────────────────────────────────\n// Extract Telegram message fields → Convex mutation args\n// ─────────────────────────────────────────────────────\nconst update = $input.first().json;\nconst msg = update.message;\n\n// Skip non-message updates (edited_message, callback_query, etc.)\nif (!msg) return [];\n\nconst from = msg.from;\nif (!from) return []; // skip channel posts (no sender)\n\n// Epoch milliseconds from Telegram unix timestamp\nconst ts = msg.date * 1000;\n\n// ── Text and media ──────────────────────────────────\nlet text = '';\nlet mediaFileId;\nlet mediaType;\n\nif (msg.text) {\n  text = msg.text;\n} else if (msg.photo) {\n  // Telegram sends multiple sizes; last entry is the largest\n  const photo = msg.photo[msg.photo.length - 1];\n  mediaFileId = photo.file_id;\n  mediaType = 'photo';\n  text = msg.caption || '[photo]';\n} else if (msg.document) {\n  mediaFileId = msg.document.file_id;\n  mediaType = 'document';\n  text = msg.caption || ('[document: ' + (msg.document.file_name || 'file') + ']');\n} else if (msg.voice) {\n  mediaFileId = msg.voice.file_id;\n  mediaType = 'voice';\n  text = '[voice message]';\n} else if (msg.sticker) {\n  text = '[sticker' + (msg.sticker.emoji ? ': ' + msg.sticker.emoji : '') + ']';\n} else {\n  text = '[unsupported message type]';\n}\n\n// ── Build Convex mutation args ───────────────────────\n// telegramMessageId: composite \"<chatId>:<messageId>\" for global uniqueness\nconst args = {\n  telegramId: String(from.id),\n  customerFirstName: from.first_name,\n  text,\n  telegramMessageId: String(from.id) + ':' + String(msg.message_id),\n  createdAt: ts,\n};\n\n// Only include optional fields if they have values\nif (from.last_name)  args.customerLastName  = from.last_name;\nif (from.username)   args.customerUsername  = from.username;\nif (mediaFileId)     args.mediaFileId       = mediaFileId;\nif (mediaType)       args.mediaType         = mediaType;\n\nreturn [{\n  json: {\n    path: 'messages:ingestTelegramMessage',\n    args,\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Extract Message Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fastidious-schnauzer-265.convex.cloud/api/mutation",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 2000,
+          "timeout": 10000
+        }
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Convex ingestTelegramMessage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log error details — replace with Slack/email node if needed\nconst error = $input.first().json;\nconsole.error('[Telegram Ingestion] Convex call failed:', JSON.stringify(error));\n// Re-throw so n8n marks execution as error (enables retry/alert)\nthrow new Error('Convex mutation failed: ' + JSON.stringify(error));"
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 500]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [{ "node": "Extract Message Fields", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Message Fields": {
+      "main": [
+        [{ "node": "Convex ingestTelegramMessage", "type": "main", "index": 0 }]
+      ]
+    },
+    "Convex ingestTelegramMessage": {
+      "main": [],
+      "error": [
+        [{ "node": "Log Error", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "replace-with-your-n8n-instance-id"
+  },
+  "id": "telegram-convex-ingestion-v1",
+  "tags": []
+}
