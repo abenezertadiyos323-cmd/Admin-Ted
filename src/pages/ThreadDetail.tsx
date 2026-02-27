@@ -94,14 +94,14 @@ export default function ThreadDetail() {
       style={{ height: 'calc(100vh - 64px - env(safe-area-inset-bottom, 0px))' }}
     >
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 flex items-center gap-3 px-3 py-3 flex-shrink-0">
+      <div className="bg-white border-b border-black/5 flex items-center gap-3 px-3 py-3 flex-shrink-0">
         <button
           onClick={() => navigate(-1)}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200"
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 active:bg-slate-200 transition-colors"
         >
-          <ChevronLeft size={22} className="text-gray-700" />
+          <ChevronLeft size={22} className="text-slate-700" />
         </button>
-        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
           {initials}
         </div>
         <div className="flex-1 min-w-0">
@@ -110,34 +110,33 @@ export default function ThreadDetail() {
             <p className="text-xs text-gray-400">@{thread.customerUsername}</p>
           )}
         </div>
-        <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${
-          thread.status === 'new' ? 'bg-blue-50 text-blue-600' :
-          thread.status === 'seen' ? 'bg-gray-100 text-gray-500' :
-          'bg-green-50 text-green-600'
-        }`}>
+        <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${thread.status === 'new' ? 'bg-indigo-50 text-indigo-600' :
+            thread.status === 'seen' ? 'bg-slate-100 text-slate-500' :
+              'bg-green-50 text-green-600'
+          }`}>
           {thread.status.charAt(0).toUpperCase() + thread.status.slice(1)}
         </span>
       </div>
 
       {/* Exchange Cards (pinned) */}
       {exchanges.length > 0 && (
-        <div className="bg-white border-b border-gray-100 px-3 py-2 space-y-2 flex-shrink-0">
+        <div className="bg-white border-b border-black/5 px-3 py-2 space-y-2 flex-shrink-0">
           {exchanges.map((ex) => {
             const statusStyle = getExchangeStatusColor(ex.status);
             return (
               <button
                 key={ex._id}
                 onClick={() => navigate(`/exchanges/${ex._id}`)}
-                className="w-full flex items-center gap-3 bg-blue-50 rounded-xl p-3 text-left active:scale-[0.98] transition-transform"
+                className="w-full flex items-center gap-3 bg-indigo-50 rounded-xl p-3 text-left transition-all duration-150 active:scale-[0.99]"
               >
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <ArrowLeftRight size={14} className="text-blue-600" />
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <ArrowLeftRight size={14} className="text-indigo-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-blue-800 truncate">
+                  <p className="text-xs font-semibold text-indigo-800 truncate">
                     {ex.tradeInBrand} {ex.tradeInModel} → {ex.desiredPhone?.phoneType ?? 'Unknown'}
                   </p>
-                  <p className="text-[11px] text-blue-500">
+                  <p className="text-[11px] text-indigo-500">
                     Pay {formatETB(ex.finalDifference)}
                   </p>
                 </div>
@@ -168,14 +167,13 @@ export default function ThreadDetail() {
                     className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${
-                        isAdmin
-                          ? 'bg-blue-600 text-white rounded-br-sm'
-                          : 'bg-white text-gray-800 rounded-bl-sm shadow-sm border border-gray-100'
-                      }`}
+                      className={`max-w-[80%] rounded-xl px-3.5 py-2.5 ${isAdmin
+                          ? 'bg-indigo-600 text-white rounded-br-sm'
+                          : 'bg-white text-slate-800 rounded-bl-sm shadow-sm border border-black/5'
+                        }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                      <p className={`text-[10px] mt-1 ${isAdmin ? 'text-blue-200' : 'text-gray-400'} text-right`}>
+                      <p className={`text-[10px] mt-1 ${isAdmin ? 'text-indigo-200' : 'text-slate-400'} text-right`}>
                         {formatTime(msg.createdAt)}
                       </p>
                     </div>
@@ -190,27 +188,27 @@ export default function ThreadDetail() {
 
       {/* Input */}
       {thread.status !== 'done' ? (
-        <div className="bg-white border-t border-gray-100 px-3 py-3 flex items-end gap-2 flex-shrink-0">
+        <div className="bg-white border-t border-black/5 px-3 py-3 flex items-end gap-2 flex-shrink-0">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none resize-none max-h-32 overflow-y-auto"
+            className="flex-1 bg-slate-100 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none resize-none max-h-32 overflow-y-auto"
             style={{ minHeight: '42px' }}
           />
           <button
             onClick={handleSend}
             disabled={!text.trim() || sending}
-            className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform disabled:opacity-40"
+            className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0 btn-interactive disabled:opacity-40"
           >
             <Send size={16} className="text-white" />
           </button>
         </div>
       ) : (
-        <div className="bg-white border-t border-gray-100 px-4 py-3 text-center flex-shrink-0">
-          <p className="text-xs text-gray-400">This thread is closed. Customer can reopen by sending a message.</p>
+        <div className="bg-white border-t border-black/5 px-4 py-3 text-center flex-shrink-0">
+          <p className="text-xs text-slate-400">This thread is closed. Customer can reopen by sending a message.</p>
         </div>
       )}
     </div>

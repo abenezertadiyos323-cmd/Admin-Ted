@@ -299,286 +299,278 @@ export default function ProductForm() {
         showBack
       />
 
-      <div className="px-4 py-4 space-y-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
-        {/* Image Upload — backed by Convex Storage */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Photos (up to 3)</p>
+        <div className="px-4 py-4 space-y-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+          {/* Image Upload — backed by Convex Storage */}
+          <div className="card-interactive p-4 cursor-default">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Photos (up to 3)</p>
 
-          {/* Hidden native file picker — opened programmatically per slot */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileSelected}
-          />
-
-          <div className="flex gap-3">
-            {[1, 2, 3].map((n) => {
-              const pending = pendingImages.find((img) => img.order === n);
-              const existing = existingProduct?.images?.find((img) => img.order === n);
-              const displayUrl = pending?.preview ?? existing?.url;
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => handleSlotPress(n)}
-                  className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden relative active:scale-95 transition-transform"
-                >
-                  {displayUrl ? (
-                    <img src={displayUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <Camera size={20} className="text-gray-300" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[11px] text-gray-400 mt-2">Tap a slot to pick an image (max 3)</p>
-        </div>
-
-        {/* Basic Info */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Basic Info</p>
-
-          {/* Type (new products only) */}
-          {!isEdit && (
-            <div>
-              <label className="text-xs font-medium text-gray-600 mb-1.5 block">Type</label>
-              <div className="flex gap-2">
-                {(['phone', 'accessory'] as ProductType[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => update('type', t)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${
-                      form.type === t
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Phone Type */}
-          <div>
-            <label className="text-xs font-medium text-gray-600 mb-1.5 block">Phone Type *</label>
+            {/* Hidden native file picker — opened programmatically per slot */}
             <input
-              type="text"
-              value={form.phoneType}
-              onChange={(e) => update('phoneType', e.target.value)}
-              placeholder={isPhone ? 'e.g. iPhone 14 Pro Max' : 'e.g. AirPods Pro 2nd Gen'}
-              className={`w-full bg-gray-50 border rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.phoneType ? 'border-red-400 bg-red-50' : 'border-gray-200'
-              }`}
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelected}
             />
-            {errors.phoneType && <p className="text-xs text-red-500 mt-1">{errors.phoneType}</p>}
+
+            <div className="flex gap-3">
+              {[1, 2, 3].map((n) => {
+                const pending = pendingImages.find((img) => img.order === n);
+                const existing = existingProduct?.images?.find((img) => img.order === n);
+                const displayUrl = pending?.preview ?? existing?.url;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => handleSlotPress(n)}
+                    className="w-20 h-20 rounded-xl border-2 border-dashed border-black/10 flex items-center justify-center bg-slate-50 overflow-hidden relative active:scale-95 transition-transform"
+                  >
+                    {displayUrl ? (
+                      <img src={displayUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera size={20} className="text-gray-300" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">Tap a slot to pick an image (max 3)</p>
           </div>
 
-          {/* Phone-specific fields */}
-          {isPhone && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1.5 block">RAM</label>
-                  <input
-                    type="text"
-                    value={form.ram}
-                    onChange={(e) => update('ram', e.target.value)}
-                    placeholder="e.g. 8GB"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1.5 block">Storage *</label>
-                  <input
-                    type="text"
-                    value={form.storage}
-                    onChange={(e) => update('storage', e.target.value)}
-                    placeholder="e.g. 256GB"
-                    className={`w-full bg-gray-50 border rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.storage ? 'border-red-400 bg-red-50' : 'border-gray-200'
-                    }`}
-                  />
-                  {errors.storage && <p className="text-xs text-red-500 mt-1">{errors.storage}</p>}
-                </div>
-              </div>
+          {/* Basic Info */}
+          <div className="card-interactive p-4 space-y-4 cursor-default">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Basic Info</p>
 
-              {/* Condition */}
+            {/* Type (new products only) */}
+            {!isEdit && (
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Condition *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CONDITIONS.map((c) => (
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Type</label>
+                <div className="flex gap-2">
+                  {(['phone', 'accessory'] as ProductType[]).map((t) => (
                     <button
-                      key={c}
-                      onClick={() => update('condition', c)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        form.condition === c
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 bg-gray-50'
-                      }`}
+                      key={t}
+                      onClick={() => update('type', t)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${form.type === t
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600'
+                        }`}
                     >
-                      <p className={`text-xs font-semibold ${form.condition === c ? 'text-blue-700' : 'text-gray-700'}`}>{c}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{CONDITION_DESCRIPTIONS[c]}</p>
+                      {t}
                     </button>
                   ))}
                 </div>
-                {errors.condition && <p className="text-xs text-red-500 mt-1">{errors.condition}</p>}
               </div>
-            </>
-          )}
-        </div>
+            )}
 
-        {/* Pricing & Stock */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pricing & Stock</p>
-
-          <div className="grid grid-cols-2 gap-3">
+            {/* Phone Type */}
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1.5 block">Price (ETB) *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1.5 block">Phone Type *</label>
               <input
                 type="text"
-                value={priceText}
-                onChange={(e) => handlePriceChange(e.target.value)}
-                placeholder="e.g. 85000"
-                inputMode="numeric"
-                className={`w-full bg-gray-50 border rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.price ? 'border-red-400 bg-red-50' : 'border-gray-200'
-                }`}
+                value={form.phoneType}
+                onChange={(e) => update('phoneType', e.target.value)}
+                placeholder={isPhone ? 'e.g. iPhone 14 Pro Max' : 'e.g. AirPods Pro 2nd Gen'}
+                className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.phoneType ? 'border-red-400 bg-red-50' : 'border-black/5'
+                  }`}
               />
-              {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
-              {form.price !== null && form.price > 0 && (
-                <p className="text-[11px] text-blue-600 mt-1">{formatETB(form.price)}</p>
-              )}
+              {errors.phoneType && <p className="text-xs text-red-500 mt-1">{errors.phoneType}</p>}
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600 mb-1.5 block">Stock Qty *</label>
-              <input
-                type="number"
-                value={form.stockQuantity}
-                onChange={(e) => update('stockQuantity', e.target.value)}
-                placeholder="e.g. 3"
-                min="0"
-                className={`w-full bg-gray-50 border rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.stockQuantity ? 'border-red-400 bg-red-50' : 'border-gray-200'
-                }`}
-              />
-              {form.stockQuantity !== '' && (
-                <p className={`text-[11px] mt-1 font-medium ${stockStatus.color}`}>
-                  {stockStatus.label}
-                </p>
-              )}
-            </div>
+
+            {/* Phone-specific fields */}
+            {isPhone && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">RAM</label>
+                    <input
+                      type="text"
+                      value={form.ram}
+                      onChange={(e) => update('ram', e.target.value)}
+                      placeholder="e.g. 8GB"
+                      className="w-full bg-slate-50 border border-black/5 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">Storage *</label>
+                    <input
+                      type="text"
+                      value={form.storage}
+                      onChange={(e) => update('storage', e.target.value)}
+                      placeholder="e.g. 256GB"
+                      className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.storage ? 'border-red-400 bg-red-50' : 'border-black/5'
+                        }`}
+                    />
+                    {errors.storage && <p className="text-xs text-red-500 mt-1">{errors.storage}</p>}
+                  </div>
+                </div>
+
+                {/* Condition */}
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1.5 block">Condition *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {CONDITIONS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => update('condition', c)}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${form.condition === c
+                          ? 'border-indigo-500 bg-indigo-50'
+                          : 'border-black/5 bg-slate-50'
+                          }`}
+                      >
+                        <p className={`text-xs font-semibold ${form.condition === c ? 'text-indigo-700' : 'text-gray-700'}`}>{c}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{CONDITION_DESCRIPTIONS[c]}</p>
+                      </button>
+                    ))}
+                  </div>
+                  {errors.condition && <p className="text-xs text-red-500 mt-1">{errors.condition}</p>}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Exchange Available — segmented pill toggle */}
-          {isPhone && (
-            <div>
-              <p className="text-sm font-semibold text-gray-800 mb-2">Exchange Available</p>
-              <div className="flex rounded-2xl border border-gray-200 bg-gray-100 p-1 gap-1">
-                <button
-                  type="button"
-                  onClick={() => update('exchangeEnabled', false)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                    !form.exchangeEnabled
+          {/* Pricing & Stock */}
+          <div className="card-interactive p-4 space-y-4 cursor-default">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pricing & Stock</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Price (ETB) *</label>
+                <input
+                  type="text"
+                  value={priceText}
+                  onChange={(e) => handlePriceChange(e.target.value)}
+                  placeholder="e.g. 85000"
+                  inputMode="numeric"
+                  className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.price ? 'border-red-400 bg-red-50' : 'border-black/5'
+                    }`}
+                />
+                {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
+                {form.price !== null && form.price > 0 && (
+                  <p className="text-[11px] text-blue-600 mt-1">{formatETB(form.price)}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Stock Qty *</label>
+                <input
+                  type="number"
+                  value={form.stockQuantity}
+                  onChange={(e) => update('stockQuantity', e.target.value)}
+                  placeholder="e.g. 3"
+                  min="0"
+                  className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.stockQuantity ? 'border-red-400 bg-red-50' : 'border-black/5'
+                    }`}
+                />
+                {form.stockQuantity !== '' && (
+                  <p className={`text-[11px] mt-1 font-medium ${stockStatus.color}`}>
+                    {stockStatus.label}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Exchange Available — segmented pill toggle */}
+            {isPhone && (
+              <div>
+                <p className="text-sm font-semibold text-gray-800 mb-2">Exchange Available</p>
+                <div className="flex rounded-xl border border-black/5 bg-slate-100 p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => update('exchangeEnabled', false)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${!form.exchangeEnabled
                       ? 'bg-red-500 text-white shadow-sm'
                       : 'text-gray-400'
-                  }`}
-                >
-                  Exchange OFF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => update('exchangeEnabled', true)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                    form.exchangeEnabled
+                      }`}
+                  >
+                    Exchange OFF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update('exchangeEnabled', true)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.exchangeEnabled
                       ? 'bg-green-500 text-white shadow-sm'
                       : 'text-gray-400'
-                  }`}
-                >
-                  Exchange ON
-                </button>
+                      }`}
+                  >
+                    Exchange ON
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1.5 px-0.5">
+                  {form.exchangeEnabled
+                    ? '✓ Customers can submit trade-in requests for this phone'
+                    : 'This phone is not available for exchange or trade-in'}
+                </p>
               </div>
-              <p className="text-[11px] text-gray-400 mt-1.5 px-0.5">
-                {form.exchangeEnabled
-                  ? '✓ Customers can submit trade-in requests for this phone'
-                  : 'This phone is not available for exchange or trade-in'}
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="card-interactive p-4 cursor-default">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 block">
+              Description
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) => update('description', e.target.value)}
+              placeholder="Short summary about the product (color, accessories included, etc.)"
+              rows={3}
+              className="w-full bg-slate-50 border border-black/5 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors resize-none"
+            />
+          </div>
+
+          {/* Save error banner */}
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 font-medium">
+              {saveError}
+            </div>
+          )}
+
+          {/* Primary Save button */}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-4 bg-indigo-600 text-white font-semibold btn-interactive rounded-xl shadow-sm disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : `Add ${form.type === 'phone' ? 'Phone' : 'Accessory'}`}
+          </button>
+
+          {/* DEBUG — visible in Telegram to confirm which Convex deployment is active */}
+          {import.meta.env.DEV && (
+            <p className="text-center text-[10px] text-gray-400 font-mono">
+              Convex: {debugHostname}
+            </p>
+          )}
+
+          {/* Archive / Restore (Edit only) */}
+          {isEdit && existingProduct && (
+            <div className="card-interactive p-4 cursor-default mt-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Danger Zone</p>
+              {existingProduct.archivedAt ? (
+                <button
+                  onClick={handleRestore}
+                  disabled={saving}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-green-500 text-green-600 font-semibold text-sm btn-interactive disabled:opacity-50"
+                >
+                  <RotateCcw size={16} />
+                  Restore Product
+                </button>
+              ) : (
+                <button
+                  onClick={handleArchive}
+                  disabled={saving}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-red-300 text-red-500 font-semibold text-sm btn-interactive disabled:opacity-50"
+                >
+                  <Archive size={16} />
+                  Archive Product
+                </button>
+              )}
+              <p className="text-[11px] text-gray-400 mt-2 text-center">
+                {existingProduct.archivedAt
+                  ? 'Restore to make product visible again'
+                  : 'Archived products are hidden from customers. Auto-deleted after 30 days.'}
               </p>
             </div>
           )}
-        </div>
-
-        {/* Description */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 block">
-            Description
-          </label>
-          <textarea
-            value={form.description}
-            onChange={(e) => update('description', e.target.value)}
-            placeholder="Short summary about the product (color, accessories included, etc.)"
-            rows={3}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          />
-        </div>
-
-        {/* Save error banner */}
-        {saveError && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 font-medium">
-            {saveError}
-          </div>
-        )}
-
-        {/* Primary Save button — full width, below Description */}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-4 rounded-2xl bg-blue-600 text-white text-base font-bold active:scale-[0.97] transition-transform disabled:opacity-50 shadow-sm"
-        >
-          {saving ? 'Saving…' : isEdit ? 'Save Changes' : `Add ${form.type === 'phone' ? 'Phone' : 'Accessory'}`}
-        </button>
-
-        {/* DEBUG — visible in Telegram to confirm which Convex deployment is active */}
-        {import.meta.env.DEV && (
-          <p className="text-center text-[10px] text-gray-400 font-mono">
-            Convex: {debugHostname}
-          </p>
-        )}
-
-        {/* Archive / Restore (Edit only) */}
-        {isEdit && existingProduct && (
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Danger Zone</p>
-            {existingProduct.archivedAt ? (
-              <button
-                onClick={handleRestore}
-                disabled={saving}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-green-500 text-green-600 font-semibold text-sm active:scale-95 transition-transform"
-              >
-                <RotateCcw size={16} />
-                Restore Product
-              </button>
-            ) : (
-              <button
-                onClick={handleArchive}
-                disabled={saving}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-red-300 text-red-500 font-semibold text-sm active:scale-95 transition-transform"
-              >
-                <Archive size={16} />
-                Archive Product
-              </button>
-            )}
-            <p className="text-[11px] text-gray-400 mt-2 text-center">
-              {existingProduct.archivedAt
-                ? 'Restore to make product visible again'
-                : 'Archived products are hidden from customers. Auto-deleted after 30 days.'}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Send, CheckCircle, XCircle, MessageCircle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Send, CheckCircle, MessageCircle, ArrowRight } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getExchangeById, updateExchangeStatus, sendQuote } from '../lib/api';
 import { getTelegramUser } from '../lib/telegram';
@@ -190,7 +190,7 @@ export default function ExchangeDetail() {
         </div>
 
         {/* Price Calculation */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 border border-black/5 shadow-sm cursor-default">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Price Breakdown</p>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
@@ -201,10 +201,10 @@ export default function ExchangeDetail() {
               <span className="text-sm text-gray-600">Trade-in Value</span>
               <span className="text-sm font-semibold text-green-600">− {formatETB(exchange.finalTradeInValue)}</span>
             </div>
-            <div className="h-px bg-gray-100 my-1" />
+            <div className="h-px bg-black/5 my-1" />
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold text-gray-900">Customer Pays</span>
-              <span className="text-base font-bold text-blue-600">{formatETB(exchange.finalDifference)}</span>
+              <span className="text-base font-bold text-indigo-600">{formatETB(exchange.finalDifference)}</span>
             </div>
           </div>
           {(exchange.adminOverrideTradeInValue || exchange.adminOverrideDifference) && (
@@ -217,9 +217,55 @@ export default function ExchangeDetail() {
           )}
         </div>
 
+        {/* Action Buttons */}
+        {(exchange.status === 'Pending' || exchange.status === 'Quoted' || exchange.status === 'Accepted') && (
+          <div className="bg-white rounded-xl p-4 mt-4 mb-4 border border-black/5 shadow-sm cursor-default">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Actions</p>
+            <div className="space-y-2 flex flex-col items-center">
+              {exchange.status === 'Pending' && (
+                <button
+                  onClick={() => setShowQuoteModal(true)}
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  <Send size={16} />
+                  Send Quote: {formatETB(exchange.finalDifference)}
+                </button>
+              )}
+              {exchange.status === 'Quoted' && (
+                <button
+                  onClick={() => handleAction('accept')}
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-white font-semibold text-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  <CheckCircle size={16} />
+                  Mark Accepted
+                </button>
+              )}
+              {exchange.status === 'Accepted' && (
+                <button
+                  onClick={() => handleAction('complete')}
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 text-white font-semibold text-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  <CheckCircle size={16} />
+                  Mark Completed
+                </button>
+              )}
+              <button
+                onClick={() => handleAction('reject')}
+                disabled={actionLoading}
+                className="mt-2 text-xs font-medium text-red-600 bg-transparent py-2 active:scale-[0.98] transition-all text-center"
+              >
+                Reject Exchange
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Customer Notes */}
         {exchange.customerNotes && (
-          <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 shadow-sm">
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Customer Notes</p>
             <p className="text-sm text-amber-800">{exchange.customerNotes}</p>
             {exchange.budgetMentionedInSubmission && (
@@ -230,73 +276,24 @@ export default function ExchangeDetail() {
           </div>
         )}
 
-        {/* Action Buttons */}
-        {(exchange.status === 'Pending' || exchange.status === 'Quoted' || exchange.status === 'Accepted') && (
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Actions</p>
-            <div className="space-y-2">
-              {exchange.status === 'Pending' && (
-                <button
-                  onClick={() => setShowQuoteModal(true)}
-                  disabled={actionLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
-                >
-                  <Send size={16} />
-                  Send Quote
-                </button>
-              )}
-              {exchange.status === 'Quoted' && (
-                <button
-                  onClick={() => handleAction('accept')}
-                  disabled={actionLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
-                >
-                  <CheckCircle size={16} />
-                  Mark Accepted
-                </button>
-              )}
-              {exchange.status === 'Accepted' && (
-                <button
-                  onClick={() => handleAction('complete')}
-                  disabled={actionLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
-                >
-                  <CheckCircle size={16} />
-                  Mark Completed
-                </button>
-              )}
-              <button
-                onClick={() => handleAction('reject')}
-                disabled={actionLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-red-300 text-red-500 font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
-              >
-                <XCircle size={16} />
-                Reject Exchange
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* View Thread Button */}
         <button
           onClick={() => navigate(`/inbox/${exchange.threadId}`)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-semibold text-sm active:scale-95 transition-transform shadow-sm"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-black/5 text-gray-700 font-semibold text-sm active:scale-[0.98] transition-transform shadow-sm"
         >
-          <MessageCircle size={16} className="text-blue-600" />
+          <MessageCircle size={16} className="text-indigo-600" />
           View Conversation
           <ArrowRight size={14} className="text-gray-400" />
         </button>
 
         {/* Finalized state */}
         {(exchange.status === 'Completed' || exchange.status === 'Rejected') && (
-          <div className={`rounded-2xl p-4 border ${
-            exchange.status === 'Completed'
-              ? 'bg-green-50 border-green-100'
-              : 'bg-red-50 border-red-100'
-          }`}>
-            <p className={`text-sm font-bold ${
-              exchange.status === 'Completed' ? 'text-green-700' : 'text-red-700'
+          <div className={`rounded-xl p-4 border shadow-sm ${exchange.status === 'Completed'
+            ? 'bg-green-50 border-green-100'
+            : 'bg-red-50 border-red-100'
             }`}>
+            <p className={`text-sm font-bold ${exchange.status === 'Completed' ? 'text-green-700' : 'text-red-700'
+              }`}>
               {exchange.status === 'Completed' ? '✅ Exchange Completed' : '❌ Exchange Rejected'}
             </p>
             <p className="text-xs text-gray-500 mt-1">
@@ -305,8 +302,7 @@ export default function ExchangeDetail() {
                 : `Rejected ${formatRelativeTime(exchange.rejectedAt!)}`}
             </p>
           </div>
-        )}
-      </div>
+        )}  </div>
 
       {/* Send Quote Modal */}
       {showQuoteModal && (
@@ -314,7 +310,9 @@ export default function ExchangeDetail() {
           <div className="bg-white rounded-t-3xl w-full p-5 pb-8 animate-in slide-in-from-bottom duration-200">
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
             <h2 className="text-base font-bold text-gray-900 mb-1">Send Quote</h2>
-            <p className="text-xs text-gray-400 mb-3">Edit the message before sending. Exchange will be marked as Quoted.</p>
+            <p className="text-xs text-slate-500 font-medium mb-3">
+              Trading {exchange.tradeInBrand} {exchange.tradeInModel} for {exchange.desiredPhone?.phoneType || 'Unknown'} • {formatETB(exchange.finalDifference)}
+            </p>
             <textarea
               value={quoteText}
               onChange={(e) => setQuoteText(e.target.value)}
