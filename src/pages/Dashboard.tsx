@@ -57,8 +57,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white px-4 pt-4 pb-4 border-b border-gray-100">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 bg-white px-4 pt-4 pb-4 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 font-medium">Good day,</p>

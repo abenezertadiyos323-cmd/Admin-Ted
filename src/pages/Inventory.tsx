@@ -341,17 +341,21 @@ function InventoryContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sticky header — env(safe-area-inset-top) prevents Telegram chrome overlap */}
+      {/* Sticky title row only */}
       <div
-        className="bg-white border-b border-gray-100 sticky top-0 z-10"
+        className="sticky top-0 z-30 bg-white border-b border-gray-100"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="px-4 pt-3 pb-0">
-          {/* Title row */}
-          <div className="flex items-center justify-between mb-3">
+        <div className="px-4 pt-3 pb-3">
+          <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
           </div>
+        </div>
+      </div>
 
+      {/* Search + tabs — scrolls with content */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="px-4 pt-2 pb-0">
           {/* Search bar + filter button */}
           <div className="flex gap-2 mb-2">
             <div className="relative flex-1">
