@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeftRight } from 'lucide-react';
 import TabBar from '../components/TabBar';
 import ExchangeCard from '../components/ExchangeCard';
@@ -22,6 +22,12 @@ const EMPTY_MESSAGES: Record<ThreadCategory, { title: string; subtitle: string }
 
 export default function Exchanges() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const filterParam = searchParams.get('filter');
+  const FILTER_LABELS: Record<string, string> = {
+    quoted: 'Open Quotes',
+  };
+  const filterLabel = filterParam ? (FILTER_LABELS[filterParam] ?? filterParam) : null;
   const [activeTab, setActiveTab] = useState<ThreadCategory>('hot');
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +64,11 @@ export default function Exchanges() {
       <div className="sticky top-0 z-10 shrink-0 bg-white border-b border-gray-100">
         <div className="px-4 pt-4 pb-0">
           <h1 className="text-xl font-bold text-gray-900 mb-3">Exchanges</h1>
+          {filterLabel && (
+            <div className="mx-4 mb-2 flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2">
+              <span className="text-xs font-medium text-blue-700">Filtering: {filterLabel}</span>
+            </div>
+          )}
         </div>
         <TabBar
           tabs={tabs}
