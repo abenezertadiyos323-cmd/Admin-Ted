@@ -159,6 +159,7 @@ export default defineSchema({
 
     lastCustomerMessageAt: v.optional(v.number()),
     lastAdminMessageAt: v.optional(v.number()),
+    firstMessageAt: v.optional(v.number()),
 
     hasCustomerMessaged: v.boolean(),
     hasAdminReplied: v.boolean(),
@@ -166,7 +167,6 @@ export default defineSchema({
 
     createdAt: v.number(),
     updatedAt: v.number(),
-    firstMessageAt: v.optional(v.number()),
   })
     .index("by_telegramId", ["telegramId"])
     .index("by_status", ["status"])
@@ -180,11 +180,9 @@ export default defineSchema({
   messages: defineTable({
     threadId: v.id("threads"),
     sender: MessageSender,
-    senderRole: v.optional(v.union(
-      v.literal("customer"),
-      v.literal("admin"),
-      v.literal("bot")
-    )),
+    // Extends sender: bot is a subcategory of admin used for automated replies.
+    // When senderRole === "bot", the message was sent by the Telegram bot, not a human admin.
+    senderRole: v.optional(v.union(MessageSender, v.literal("bot"))),
     senderTelegramId: v.string(),
     text: v.string(),
     exchangeId: v.optional(v.id("exchanges")),
