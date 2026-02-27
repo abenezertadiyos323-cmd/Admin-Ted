@@ -362,14 +362,16 @@ export default function ProductForm() {
               </div>
             )}
 
-            {/* Phone Type */}
+            {/* Phone Type / Accessory Name */}
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1.5 block">Phone Type *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1.5 block">
+                {isPhone ? 'Phone Type *' : 'Accessory Name *'}
+              </label>
               <input
                 type="text"
                 value={form.phoneType}
                 onChange={(e) => update('phoneType', e.target.value)}
-                placeholder={isPhone ? 'e.g. iPhone 14 Pro Max' : 'e.g. AirPods Pro 2nd Gen'}
+                placeholder={isPhone ? 'e.g. iPhone 13 Pro Max' : 'e.g. AirPods Pro 2nd Gen'}
                 className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.phoneType ? 'border-red-400 bg-red-50' : 'border-black/5'
                   }`}
               />

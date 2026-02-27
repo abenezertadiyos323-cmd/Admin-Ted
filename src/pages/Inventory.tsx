@@ -434,7 +434,10 @@ function InventoryContent() {
           {PRODUCT_TABS.map((pt) => (
             <button
               key={pt.key}
-              onClick={() => setActiveType(pt.key)}
+              onClick={() => {
+                if (pt.key === 'accessory' && tab === 'exchangeEnabled') setTab('all');
+                setActiveType(pt.key);
+              }}
               className={`flex-1 py-2.5 text-sm font-semibold relative transition-colors ${
                 activeType === pt.key ? 'text-blue-600' : 'text-gray-500'
               }`}
@@ -449,7 +452,7 @@ function InventoryContent() {
 
         {/* Status filter chips — All, In Stock, Low Stock, Out of Stock, Exchange, Archived */}
         <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide border-b border-gray-100">
-          {FILTER_TABS.map((ft) => (
+          {FILTER_TABS.filter((ft) => !(ft.key === 'exchangeEnabled' && activeType === 'accessory')).map((ft) => (
             <button
               key={ft.key}
               onClick={() => setTab(ft.key)}
@@ -625,11 +628,11 @@ function InventoryContent() {
 
               {/* Price Range */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price Range</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price Range (ETB)</p>
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
-                    placeholder="Min"
+                    placeholder="Min ETB"
                     value={draftFilters.priceMin ?? ''}
                     onChange={(e) =>
                       setDraftFilters((prev) => ({
@@ -642,7 +645,7 @@ function InventoryContent() {
                   <span className="text-gray-400 text-sm font-medium">–</span>
                   <input
                     type="number"
-                    placeholder="Max"
+                    placeholder="Max ETB"
                     value={draftFilters.priceMax ?? ''}
                     onChange={(e) =>
                       setDraftFilters((prev) => ({
@@ -653,6 +656,7 @@ function InventoryContent() {
                     className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
                   />
                 </div>
+                <p className="text-[11px] text-gray-400 mt-1.5">Leave empty to ignore price filtering.</p>
               </div>
 
               {/* Storage */}
@@ -678,26 +682,29 @@ function InventoryContent() {
               </div>
 
               {/* Has Images */}
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-700">Has Images</p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      hasImages: prev.hasImages ? undefined : true,
-                    }))
-                  }
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    draftFilters.hasImages ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                      draftFilters.hasImages ? 'translate-x-7' : 'translate-x-1'
+              <div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-700">Only show products with images</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDraftFilters((prev) => ({
+                        ...prev,
+                        hasImages: prev.hasImages ? undefined : true,
+                      }))
+                    }
+                    className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-3 ${
+                      draftFilters.hasImages ? 'bg-blue-600' : 'bg-gray-200'
                     }`}
-                  />
-                </button>
+                  >
+                    <span
+                      className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        draftFilters.hasImages ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">Turn on to hide products without photos.</p>
               </div>
 
             </div>
