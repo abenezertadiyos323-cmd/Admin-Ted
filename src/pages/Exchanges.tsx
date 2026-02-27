@@ -53,9 +53,9 @@ export default function Exchanges() {
   const empty = EMPTY_MESSAGES[activeTab];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100">
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 shrink-0 bg-white border-b border-gray-100">
         <div className="px-4 pt-4 pb-0">
           <h1 className="text-xl font-bold text-gray-900 mb-3">Exchanges</h1>
         </div>
@@ -69,8 +69,8 @@ export default function Exchanges() {
         />
       </div>
 
-      {/* Exchange List */}
-      <div className="px-4 py-3">
+      {/* Scrollable Exchange List */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 pb-20">
         {loading ? (
           <LoadingSpinner className="py-16" />
         ) : exchanges.length === 0 ? (
