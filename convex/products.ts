@@ -89,12 +89,11 @@ async function resolveThumbnail(
 ) {
   if (images.length === 0) return [];
   const sorted = [...images].sort((a, b) => a.order - b.order);
-  const firstId = sorted[0].storageId;
-  const url = (await ctx.storage.getUrl(firstId)) ?? "";
-  return images.map((img) => ({
+  const url = (await ctx.storage.getUrl(sorted[0].storageId)) ?? "";
+  return sorted.map((img, index) => ({
     storageId: img.storageId,
     order: img.order,
-    ...(img.storageId === firstId ? { url } : {}),
+    ...(index === 0 ? { url } : {}),
   }));
 }
 

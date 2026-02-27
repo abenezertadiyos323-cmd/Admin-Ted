@@ -31,7 +31,7 @@ export type ThreadCategory = 'hot' | 'warm' | 'cold';
 
 export interface ProductImage {
   storageId: string;
-  url: string;
+  url?: string;
   order: 1 | 2 | 3;
 }
 
