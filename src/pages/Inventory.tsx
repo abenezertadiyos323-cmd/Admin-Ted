@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { Package, Search, X, Loader2, SlidersHorizontal } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import EmptyState from '../components/EmptyState';
@@ -10,6 +11,13 @@ import type { Product, ProductType, Condition } from '../types';
 import { getSearchHistory, addToSearchHistory, clearSearchHistory } from '../utils/searchHistory';
 
 type InventoryTab = 'all' | 'inStock' | 'lowStock' | 'outOfStock' | 'exchangeEnabled' | 'archived';
+type InventoryTabParam =
+  | InventoryTab
+  | 'instock'
+  | 'lowstock'
+  | 'outofstock'
+  | 'exchange'
+  | 'exchangeenabled';
 
 const PRODUCT_TABS: { key: ProductType; label: string }[] = [
   { key: 'phone', label: 'Phones' },
@@ -45,6 +53,52 @@ const STORAGE_OPTIONS = [64, 128, 256, 512] as const;
 const productCache: Partial<Record<string, Product[]>> = {};
 const isProductType = (value: string | null): value is ProductType =>
   value === 'phone' || value === 'accessory';
+const isInventoryTabParam = (value: string | null): value is InventoryTabParam =>
+  value === 'all' ||
+  value === 'instock' ||
+  value === 'lowstock' ||
+  value === 'outofstock' ||
+  value === 'exchange' ||
+  value === 'exchangeenabled' ||
+  value === 'archived';
+
+const toInventoryTab = (value: string | null): InventoryTab => {
+  if (!value) return 'all';
+  const normalized = value.trim().toLowerCase();
+  if (!isInventoryTabParam(normalized)) return 'all';
+  if (normalized === 'instock') return 'inStock';
+  if (normalized === 'lowstock') return 'lowStock';
+  if (normalized === 'outofstock') return 'outOfStock';
+  if (normalized === 'exchange' || normalized === 'exchangeenabled') return 'exchangeEnabled';
+  return normalized;
+};
+
+const toSafeProducts = (value: unknown): Product[] => (
+  Array.isArray(value) ? value as Product[] : []
+);
+
+function InventoryErrorFallback({ error }: { error: Error }) {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl bg-white border border-red-100 rounded-2xl p-5 shadow-sm">
+        <h1 className="text-lg font-semibold text-gray-900 mb-2">Inventory failed to render</h1>
+        <p className="text-sm text-gray-700 mb-3">{error.message || 'Unknown error'}</p>
+        {error.stack && (
+          <pre className="text-xs text-red-700 bg-red-50 rounded-xl p-3 overflow-x-auto mb-4 whitespace-pre-wrap">
+            {error.stack}
+          </pre>
+        )}
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold active:scale-95 transition-transform"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function ProductSkeleton() {
   return (
@@ -60,26 +114,28 @@ function ProductSkeleton() {
   );
 }
 
-export default function Inventory() {
+function InventoryContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inventoryTypeParam = searchParams.get('type');
+  const inventoryFilterParam = searchParams.get('filter');
+  const searchParamQuery = searchParams.get('q');
 
   const [activeType, setActiveType] = useState<ProductType>(
     () => isProductType(inventoryTypeParam) ? inventoryTypeParam : 'phone',
   );
   // Initialise tab from URL param so Dashboard deep-links still work.
   const [tab, setTab] = useState<InventoryTab>(
-    () => searchParams.get('filter') === 'lowstock' ? 'lowStock' : 'all',
+    () => toInventoryTab(inventoryFilterParam),
   );
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState<string>(() => (searchParamQuery ?? '').trim());
   const [searchHistory, setSearchHistory] = useState<string[]>(() => getSearchHistory());
   const [searchFocused, setSearchFocused] = useState(false);
   const [confirmDecrementProduct, setConfirmDecrementProduct] = useState<Product | null>(null);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
   // committedQ is the value actually sent to the backend (debounced)
-  const [committedQ, setCommittedQ] = useState('');
+  const [committedQ, setCommittedQ] = useState<string>(() => (searchParamQuery ?? '').trim());
   // isSearching: true while the debounce timer is pending
   const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,17 +167,26 @@ export default function Inventory() {
     storageGb: advancedFilters.storageGb,
     hasImages: advancedFilters.hasImages,
   });
-  const cached = productCache[cacheKey];
+  const cached = toSafeProducts(productCache[cacheKey]);
+  const hasConvexResult = convexProducts !== undefined;
+  const products = hasConvexResult ? toSafeProducts(convexProducts) : cached;
+  const loading = !hasConvexResult && cached.length === 0;
+
+  useEffect(() => {
+    if (hasConvexResult && !Array.isArray(convexProducts)) {
+      console.error('[Inventory] products query returned a non-array payload', convexProducts);
+    }
+  }, [hasConvexResult, convexProducts]);
+
   // Only show skeleton when BOTH Convex and cache are empty
-  const loading = convexProducts === undefined && !cached;
-  const products = (convexProducts ?? cached ?? []) as Product[];
+  const safeSearchHistory = Array.isArray(searchHistory) ? searchHistory : [];
 
   // Keep module-level cache warm so re-visits are instant
   useEffect(() => {
-    if (convexProducts !== undefined) {
-      productCache[cacheKey] = convexProducts as Product[];
+    if (hasConvexResult) {
+      productCache[cacheKey] = products;
     }
-  }, [cacheKey, convexProducts]);
+  }, [cacheKey, hasConvexResult, products]);
 
   // Save to history on blur if the query is meaningful
   const handleSearchBlur = () => {
@@ -227,7 +292,18 @@ export default function Inventory() {
     });
   };
 
-  const updateProductStock = async (productId: string, delta: 1 | -1) => {
+  const getProductId = (product: Product): string | null => (
+    typeof product._id === 'string' && product._id.length > 0 ? product._id : null
+  );
+  const getProductStock = (product: Product): number => (
+    typeof product.stockQuantity === 'number' ? product.stockQuantity : 0
+  );
+
+  const updateProductStock = async (productId: string | null, delta: 1 | -1) => {
+    if (!productId) {
+      console.error('[Inventory] cannot update stock: missing product id');
+      return;
+    }
     setProductPending(productId, true);
     try {
       await updateStockQuantity({ productId: productId as Id<'products'>, delta });
@@ -238,19 +314,30 @@ export default function Inventory() {
     }
   };
 
-  const handleIncrement = (product: Product) => void updateProductStock(product._id, 1);
+  const handleIncrement = (product: Product) => void updateProductStock(getProductId(product), 1);
   const handleDecrementRequest = (product: Product) => {
-    if (product.stockQuantity === 0) return;
+    if (getProductStock(product) <= 0) return;
+    if (!getProductId(product)) {
+      console.error('[Inventory] cannot decrement stock: missing product id');
+      return;
+    }
     setConfirmDecrementProduct(product);
   };
   const handleConfirmDecrement = () => {
     if (!confirmDecrementProduct) return;
-    const productId = confirmDecrementProduct._id;
+    const productId = getProductId(confirmDecrementProduct);
     setConfirmDecrementProduct(null);
     void updateProductStock(productId, -1);
   };
 
-  const showHistoryChips = searchFocused && !searchQuery && searchHistory.length > 0;
+  const showHistoryChips = searchFocused && !searchQuery && safeSearchHistory.length > 0;
+  const confirmProductId = confirmDecrementProduct ? getProductId(confirmDecrementProduct) : null;
+  const confirmProductStock = confirmDecrementProduct ? getProductStock(confirmDecrementProduct) : 0;
+  const confirmProductName = confirmDecrementProduct &&
+    typeof confirmDecrementProduct.phoneType === 'string' &&
+    confirmDecrementProduct.phoneType.trim().length > 0
+    ? confirmDecrementProduct.phoneType
+    : 'Unnamed product';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -328,7 +415,7 @@ export default function Inventory() {
                 </button>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {searchHistory.map((h) => (
+                {safeSearchHistory.map((h) => (
                   <button
                     key={h}
                     onMouseDown={() => applyHistoryChip(h)}
@@ -402,35 +489,46 @@ export default function Inventory() {
               {products.length} product{products.length !== 1 ? 's' : ''}
               {tab !== 'all' ? ` · ${FILTER_TABS.find((ft) => ft.key === tab)?.label ?? ''}` : ''}
             </p>
-            {products.map((product) => (
-              <div key={product._id} className="space-y-1">
-                <ProductCard
-                  product={product}
-                  onClick={() => navigate(`/inventory/${product._id}?type=${activeType}`)}
-                />
-                <div className="flex items-center justify-end gap-2 px-2">
-                  <button
-                    type="button"
-                    onClick={() => handleDecrementRequest(product)}
-                    disabled={product.stockQuantity === 0 || pendingProductIds.has(product._id)}
-                    className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
-                  >
-                    -
-                  </button>
-                  <span className="w-7 text-center text-sm font-semibold text-gray-700">
-                    {product.stockQuantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleIncrement(product)}
-                    disabled={pendingProductIds.has(product._id)}
-                    className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
-                  >
-                    +
-                  </button>
+            {products.map((product, index) => {
+              const productId = getProductId(product);
+              const stockQuantity = getProductStock(product);
+              const isPending = !!productId && pendingProductIds.has(productId);
+              return (
+                <div key={productId ?? `product-${index}`} className="space-y-1">
+                  <ProductCard
+                    product={product}
+                    onClick={() => {
+                      if (!productId) {
+                        console.error('[Inventory] cannot navigate: missing product id');
+                        return;
+                      }
+                      navigate(`/inventory/${productId}?type=${activeType}`);
+                    }}
+                  />
+                  <div className="flex items-center justify-end gap-2 px-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDecrementRequest(product)}
+                      disabled={stockQuantity === 0 || isPending}
+                      className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                    >
+                      -
+                    </button>
+                    <span className="w-7 text-center text-sm font-semibold text-gray-700">
+                      {stockQuantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleIncrement(product)}
+                      disabled={isPending}
+                      className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -445,7 +543,7 @@ export default function Inventory() {
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
             <h2 className="text-base font-bold text-gray-900 mb-1">Confirm stock decrease</h2>
             <p className="text-xs text-gray-500 mb-4">
-              {`${confirmDecrementProduct.phoneType}: ${confirmDecrementProduct.stockQuantity} → ${Math.max(0, confirmDecrementProduct.stockQuantity - 1)}`}
+              {`${confirmProductName}: ${confirmProductStock} -> ${Math.max(0, confirmProductStock - 1)}`}
             </p>
             <div className="flex gap-2">
               <button
@@ -458,7 +556,7 @@ export default function Inventory() {
               <button
                 type="button"
                 onClick={handleConfirmDecrement}
-                disabled={pendingProductIds.has(confirmDecrementProduct._id)}
+                disabled={!confirmProductId || pendingProductIds.has(confirmProductId)}
                 className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
               >
                 Yes
@@ -625,5 +723,22 @@ export default function Inventory() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Inventory() {
+  return (
+    <ErrorBoundary
+      onError={(error) => {
+        console.error('[Inventory] local error boundary caught an error', error);
+      }}
+      fallbackRender={({ error }) => (
+        <InventoryErrorFallback
+          error={error instanceof Error ? error : new Error(String(error))}
+        />
+      )}
+    >
+      <InventoryContent />
+    </ErrorBoundary>
   );
 }

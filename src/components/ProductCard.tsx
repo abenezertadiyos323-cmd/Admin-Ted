@@ -8,8 +8,17 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onClick }: ProductCardProps) {
-  const stock = getStockStatus(product.stockQuantity);
-  const imageUrl = product.images[0]?.url;
+  const stockQuantity = typeof product.stockQuantity === 'number' ? product.stockQuantity : 0;
+  const stock = getStockStatus(stockQuantity);
+  const images = Array.isArray(product.images) ? product.images : [];
+  const imageUrl = images[0]?.url;
+  const phoneType = typeof product.phoneType === 'string' && product.phoneType.trim().length > 0
+    ? product.phoneType
+    : 'Unnamed product';
+  const storage = typeof product.storage === 'string' && product.storage.trim().length > 0
+    ? product.storage
+    : undefined;
+  const priceLabel = typeof product.price === 'number' ? formatETB(product.price) : 'N/A';
 
   return (
     <button
@@ -21,7 +30,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
         {imageUrl ? (
           <img
             src={imageUrl}
-            alt={product.phoneType}
+            alt={phoneType}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -46,14 +55,14 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
             </span>
           )}
         </div>
-        <p className="text-sm font-semibold text-gray-900 truncate">{product.phoneType}</p>
-        {product.storage && (
-          <p className="text-xs text-gray-500">{product.storage}</p>
+        <p className="text-sm font-semibold text-gray-900 truncate">{phoneType}</p>
+        {storage && (
+          <p className="text-xs text-gray-500">{storage}</p>
         )}
         <div className="flex items-center justify-between mt-1">
-          <span className="text-sm font-bold text-blue-600">{formatETB(product.price)}</span>
+          <span className="text-sm font-bold text-blue-600">{priceLabel}</span>
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${stock.bg} ${stock.color}`}>
-            {product.stockQuantity === 0 ? 'Out' : `${product.stockQuantity} left`}
+            {stockQuantity === 0 ? 'Out' : `${stockQuantity} left`}
           </span>
         </div>
       </div>
