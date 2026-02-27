@@ -123,7 +123,13 @@ export default function Dashboard() {
   const kpiA_delta = metrics.repliesWaiting15m - metrics.repliesWaiting15mYesterday;
   const kpiA_comparison = `${deltaSign(kpiA_delta)} vs yesterday`;
   const kpiA_compColor =
-    metrics.repliesWaiting15m > 0 ? 'text-amber-500' : 'text-gray-400';
+    metrics.repliesWaiting15m === 0
+      ? 'text-green-600'
+      : kpiA_delta < 0
+      ? 'text-green-600'  // fewer waiting than yesterday = improvement
+      : kpiA_delta > 0
+      ? 'text-red-500'    // more waiting than yesterday = worse
+      : 'text-amber-500'; // same as yesterday, still has waiting
 
   // B — First-Time Today
   const kpiB_pct =
@@ -149,12 +155,17 @@ export default function Dashboard() {
   const kpiC_delta = metrics.medianReplyToday - metrics.medianReplyYesterday;
   const kpiC_comparison =
     metrics.medianReplyToday > 0 && metrics.medianReplyYesterday > 0
-      ? `${Math.abs(kpiC_delta)} min ${kpiC_delta <= 0 ? 'faster' : 'slower'} · ${kpiC_dot}`
+      ? kpiC_delta === 0
+        ? `Same as yesterday · ${kpiC_dot}`
+        : `${Math.abs(kpiC_delta)} min ${kpiC_delta < 0 ? 'faster' : 'slower'} · ${kpiC_dot}`
       : metrics.medianReplyToday > 0
       ? `${kpiC_dot} today`
       : 'No data yet';
   const kpiC_compColor =
-    kpiC_delta <= 0 ? 'text-green-600' : kpiC_delta <= 10 ? 'text-amber-500' : 'text-red-500';
+    kpiC_delta < 0 ? 'text-green-600'       // faster = good
+    : kpiC_delta === 0 ? 'text-gray-400'    // same = neutral
+    : kpiC_delta <= 10 ? 'text-amber-500'   // slightly slower
+    : 'text-red-500';                        // much slower
 
   // D — Phones Sold
   const kpiD_delta = metrics.phonesSoldToday - metrics.phonesSoldYesterday;
