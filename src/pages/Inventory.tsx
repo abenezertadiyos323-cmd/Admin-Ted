@@ -359,26 +359,13 @@ function InventoryContent() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
-      {/* Sticky title row only */}
-      <div
-        className="sticky top-0 z-30"
-        style={{
-          background: 'var(--surface)',
-          borderBottom: '1px solid var(--border)',
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-        }}
-      >
-        <div className="px-4 pt-3 pb-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Inventory</h1>
-          </div>
+    <div style={{ background: 'var(--bg)' }}>
+      {/* Title + Search — NOT sticky, scrolls away */}
+      <div style={{ background: 'var(--surface)' }}>
+        <div className="px-4 pt-3 pb-2">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Inventory</h1>
         </div>
-      </div>
-
-      {/* Search + tabs — scrolls with content */}
-      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-        <div className="px-4 pt-2 pb-0">
+        <div className="px-4 pb-2">
           {/* Search bar + filter button */}
           <div className="flex gap-2 mb-2">
             <div className="relative flex-1">
@@ -465,7 +452,13 @@ function InventoryContent() {
             </div>
           )}
         </div>
+      </div>
 
+      {/* Tabs — sticky */}
+      <div
+        className="sticky top-0 z-20"
+        style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+      >
         {/* Type tabs */}
         <div className="flex px-4" style={{ borderBottom: '1px solid var(--border)' }}>
           {PRODUCT_TABS.map((pt) => (
@@ -490,10 +483,7 @@ function InventoryContent() {
         </div>
 
         {/* Status filter chips */}
-        <div
-          className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide"
-          style={{ borderBottom: '1px solid var(--border)' }}
-        >
+        <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
           {FILTER_TABS.filter((ft) => !(ft.key === 'exchangeEnabled' && activeType === 'accessory')).map((ft) => (
             <button
               key={ft.key}

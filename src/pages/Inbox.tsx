@@ -76,25 +76,27 @@ export default function Inbox() {
   const empty = EMPTY_MESSAGES[activeTab];
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
-      {/* Sticky Header */}
+    <div style={{ background: 'var(--bg)' }}>
+      {/* Title — NOT sticky, scrolls away */}
+      <div className="px-4 pt-4 pb-3" style={{ background: 'var(--surface)' }}>
+        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Inbox</h1>
+        {filterLabel && (
+          <div
+            className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2"
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+          >
+            <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
+              Filtering: {filterLabel}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs row — sticky */}
       <div
-        className="sticky top-0 z-10 shrink-0"
+        className="sticky top-0 z-20"
         style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
       >
-        <div className="px-4 pt-4 pb-0">
-          <h1 className="text-xl font-bold mb-3" style={{ color: 'var(--text)' }}>Inbox</h1>
-          {filterLabel && (
-            <div
-              className="mx-4 mb-2 flex items-center gap-2 rounded-xl px-3 py-2"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-            >
-              <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
-                Filtering: {filterLabel}
-              </span>
-            </div>
-          )}
-        </div>
         <TabBar
           tabs={tabs}
           activeTab={activeTab}
@@ -105,11 +107,8 @@ export default function Inbox() {
         />
       </div>
 
-      {/* Scrollable Thread List */}
-      <div
-        className="flex-1 overflow-y-auto pb-20 mt-2 rounded-t-2xl"
-        style={{ background: 'var(--surface)' }}
-      >
+      {/* Thread list */}
+      <div className="pb-20 mt-2 rounded-t-2xl" style={{ background: 'var(--surface)' }}>
         {loading ? (
           <LoadingSpinner className="py-16" />
         ) : threads.length === 0 ? (
