@@ -6,6 +6,16 @@ interface ThreadCardProps {
   onClick: () => void;
 }
 
+// Avatar palette — vivid enough to read against dark surface
+const AVATAR_COLORS = [
+  '#2563EB', // blue-600
+  '#7C3AED', // violet-600
+  '#059669', // emerald-600
+  '#D97706', // amber-600
+  '#DC2626', // red-600
+  '#0891B2', // cyan-600
+];
+
 export default function ThreadCard({ thread, onClick }: ThreadCardProps) {
   const isUnread = thread.unreadCount > 0;
   const fullName = getCustomerName(thread.customerFirstName, thread.customerLastName);
@@ -16,41 +26,76 @@ export default function ThreadCard({ thread, onClick }: ThreadCardProps) {
     .toUpperCase()
     .slice(0, 2);
 
-  const avatarColors = [
-    'bg-blue-500', 'bg-purple-500', 'bg-green-500',
-    'bg-amber-500', 'bg-red-500', 'bg-indigo-500',
-  ];
-  const colorIdx = fullName.charCodeAt(0) % avatarColors.length;
+  const avatarBg = AVATAR_COLORS[fullName.charCodeAt(0) % AVATAR_COLORS.length];
+
+  // Unread count label
+  const unreadLabel =
+    thread.unreadCount >= 100 ? '99+' :
+    thread.unreadCount > 9    ? `${thread.unreadCount}` :
+                                 String(thread.unreadCount);
 
   return (
     <button
       onClick={onClick}
-      className="bg-white w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 active:bg-slate-50 border-b border-black/5 last:border-b-0"
+      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 active:opacity-70"
+      style={{
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+      }}
     >
       {/* Avatar */}
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm ${avatarColors[colorIdx]}`}>
+      <div
+        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm"
+        style={{ background: avatarBg }}
+      >
         {initials}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <span className={`text-sm ${isUnread ? 'font-bold text-slate-900' : 'font-medium text-slate-800'}`}>
+          <span
+            className="text-sm"
+            style={{
+              fontWeight: isUnread ? 700 : 500,
+              color: 'var(--text)',
+            }}
+          >
             {fullName}
           </span>
-          <span className="text-[11px] text-slate-400 flex-shrink-0 ml-2">
+          <span className="text-[11px] flex-shrink-0 ml-2" style={{ color: 'var(--muted)' }}>
             {formatRelativeTime(thread.lastMessageAt)}
           </span>
         </div>
+
         <div className="flex items-center justify-between">
-          <p className={`text-xs truncate flex-1 ${isUnread ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
+          <p
+            className="text-xs truncate flex-1"
+            style={{
+              color: isUnread ? 'var(--text)' : 'var(--muted)',
+              fontWeight: isUnread ? 500 : 400,
+            }}
+          >
             {thread.lastMessagePreview
               ? truncate(thread.lastMessagePreview, 50)
               : 'No messages yet'}
           </p>
+
+          {/* Instagram-style unread badge */}
           {isUnread && (
-            <span className="ml-2 flex-shrink-0 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
-              {thread.unreadCount > 9 ? '9+' : thread.unreadCount}
+            <span
+              className="ml-2 flex-shrink-0 flex items-center justify-center font-semibold text-[10px] text-white rounded-full"
+              style={{
+                background: 'var(--badge)',
+                border: '1.5px solid var(--bg)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                minWidth: thread.unreadCount > 9 ? 'auto' : '18px',
+                height: '18px',
+                padding: thread.unreadCount > 9 ? '0 5px' : '0',
+                lineHeight: 1,
+              }}
+            >
+              {unreadLabel}
             </span>
           )}
         </div>

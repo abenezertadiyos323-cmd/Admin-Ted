@@ -27,66 +27,91 @@ export default function FloatingActionButton() {
 
   return (
     <>
-      {/* FAB button */}
+      {/* FAB button — primary yellow, rotates to ✕ when open */}
       <button
         onClick={handleToggle}
-        className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] right-4 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 active:scale-95 ${open ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700'
-          }`}
+        className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] right-4 z-40 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+        style={{
+          background: open ? 'var(--surface-2)' : 'var(--primary)',
+          color:      open ? 'var(--muted)'     : 'var(--primary-foreground)',
+          border:     open ? '1px solid var(--border)' : 'none',
+          boxShadow:  open
+            ? '0 4px 16px rgba(0,0,0,0.4)'
+            : '0 4px 16px rgba(245,196,0,0.35)',
+        }}
         aria-label="Add product"
       >
         <Plus
           size={24}
-          className={`text-white transition-transform duration-200 ${open ? 'rotate-45' : ''}`}
           strokeWidth={2.5}
+          className={`transition-transform duration-200 ${open ? 'rotate-45' : ''}`}
         />
       </button>
 
-      {/* Action sheet — rendered at document.body so it overlays everything */}
+      {/* Action sheet */}
       {open &&
         createPortal(
           <>
             {/* Backdrop */}
             <div
-              className="fixed inset-0 z-50 bg-black/40"
+              className="fixed inset-0 z-50 bg-black/50"
               onClick={() => setOpen(false)}
             />
 
             {/* Bottom sheet */}
             <div
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl p-5 animate-in slide-in-from-bottom duration-200"
-              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl p-5 animate-in slide-in-from-bottom duration-200"
+              style={{
+                background: 'var(--surface)',
+                borderTop: '1px solid var(--border)',
+                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
+              }}
             >
               {/* Drag handle */}
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+              <div
+                className="w-10 h-1 rounded-full mx-auto mb-5"
+                style={{ background: 'var(--border)' }}
+              />
 
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-center mb-4">
+              <p
+                className="text-xs font-semibold uppercase tracking-wider text-center mb-4"
+                style={{ color: 'var(--muted)' }}
+              >
                 Add new item
               </p>
 
               <div className="space-y-2.5">
                 <button
                   onClick={handleAddPhone}
-                  className="w-full flex items-center gap-4 bg-slate-50 hover:bg-indigo-50 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-all"
+                  className="w-full flex items-center gap-4 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-all"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                 >
-                  <span className="w-11 h-11 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <Smartphone size={22} className="text-indigo-600" />
+                  <span
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(245,196,0,0.12)', color: 'var(--primary)' }}
+                  >
+                    <Smartphone size={22} />
                   </span>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Add Phone</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Create a new phone listing</p>
+                    <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>Add Phone</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Create a new phone listing</p>
                   </div>
                 </button>
 
                 <button
                   onClick={handleAddAccessory}
-                  className="w-full flex items-center gap-4 bg-gray-50 hover:bg-purple-50 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-all"
+                  className="w-full flex items-center gap-4 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-all"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                 >
-                  <span className="w-11 h-11 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <Headphones size={22} className="text-purple-600" />
+                  <span
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(148,163,184,0.12)', color: 'var(--muted)' }}
+                  >
+                    <Headphones size={22} />
                   </span>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Add Accessory</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Create a new accessory listing</p>
+                    <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>Add Accessory</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Create a new accessory listing</p>
                   </div>
                 </button>
               </div>
