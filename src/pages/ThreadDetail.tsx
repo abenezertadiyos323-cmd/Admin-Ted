@@ -4,8 +4,37 @@ import { Send, ArrowLeftRight, ChevronLeft } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getThreadById, getMessages, sendMessage, getExchanges, markThreadSeen } from '../lib/api';
 import { getTelegramUser } from '../lib/telegram';
-import { formatTime, formatDate, getCustomerName, getExchangeStatusColor, formatETB } from '../lib/utils';
+import { formatTime, formatDate, getCustomerName, formatETB } from '../lib/utils';
 import type { Thread, Message, Exchange } from '../types';
+
+// Avatar palette — same as ThreadCard for consistency
+const AVATAR_COLORS = [
+  '#2563EB',
+  '#7C3AED',
+  '#059669',
+  '#D97706',
+  '#DC2626',
+  '#0891B2',
+];
+
+function getExchangeStatusDark(status: string): { background: string; color: string } {
+  switch (status) {
+    case 'Pending':   return { background: 'rgba(59,130,246,0.15)',  color: '#60A5FA' };
+    case 'Quoted':    return { background: 'rgba(139,92,246,0.15)',  color: '#A78BFA' };
+    case 'Accepted':  return { background: 'rgba(245,196,0,0.15)',   color: '#F5C400' };
+    case 'Completed': return { background: 'rgba(16,185,129,0.15)',  color: '#34D399' };
+    case 'Rejected':  return { background: 'rgba(239,68,68,0.15)',   color: '#F87171' };
+    default:          return { background: 'rgba(148,163,184,0.12)', color: '#94A3B8' };
+  }
+}
+
+function getThreadStatusDark(status: string): { background: string; color: string } {
+  switch (status) {
+    case 'new':  return { background: 'rgba(59,130,246,0.15)',  color: '#60A5FA' };
+    case 'seen': return { background: 'rgba(148,163,184,0.12)', color: '#94A3B8' };
+    default:     return { background: 'rgba(16,185,129,0.15)',  color: '#34D399' };
+  }
+}
 
 export default function ThreadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -58,7 +87,7 @@ export default function ThreadDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -66,15 +95,17 @@ export default function ThreadDetail() {
 
   if (!thread) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-3">
-        <p className="text-gray-500">Thread not found</p>
-        <button onClick={() => navigate(-1)} className="text-blue-600 text-sm">Go back</button>
+      <div className="flex flex-col items-center justify-center h-screen gap-3" style={{ background: 'var(--bg)' }}>
+        <p style={{ color: 'var(--muted)' }}>Thread not found</p>
+        <button onClick={() => navigate(-1)} className="text-sm" style={{ color: 'var(--primary)' }}>Go back</button>
       </div>
     );
   }
 
   const customerName = getCustomerName(thread.customerFirstName, thread.customerLastName);
   const initials = customerName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  const avatarBg = AVATAR_COLORS[customerName.charCodeAt(0) % AVATAR_COLORS.length];
+  const threadStatusStyle = getThreadStatusDark(thread.status);
 
   // Group messages by date
   const grouped: { date: string; messages: Message[] }[] = [];
@@ -90,57 +121,77 @@ export default function ThreadDetail() {
 
   return (
     <div
-      className="flex flex-col bg-gray-50"
-      style={{ height: 'calc(100vh - 64px - env(safe-area-inset-bottom, 0px))' }}
+      className="flex flex-col"
+      style={{
+        background: 'var(--bg)',
+        height: 'calc(100vh - 64px - env(safe-area-inset-bottom, 0px))',
+      }}
     >
       {/* Header */}
-      <div className="bg-white border-b border-black/5 flex items-center gap-3 px-3 py-3 flex-shrink-0">
+      <div
+        className="flex items-center gap-3 px-3 py-3 flex-shrink-0"
+        style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+      >
         <button
           onClick={() => navigate(-1)}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 active:bg-slate-200 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+          style={{ color: 'var(--muted)' }}
         >
-          <ChevronLeft size={22} className="text-slate-700" />
+          <ChevronLeft size={22} />
         </button>
-        <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+          style={{ background: avatarBg }}
+        >
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-900 truncate">{customerName}</p>
+          <p className="text-sm font-bold truncate" style={{ color: 'var(--text)' }}>{customerName}</p>
           {thread.customerUsername && (
-            <p className="text-xs text-gray-400">@{thread.customerUsername}</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>@{thread.customerUsername}</p>
           )}
         </div>
-        <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${thread.status === 'new' ? 'bg-indigo-50 text-indigo-600' :
-            thread.status === 'seen' ? 'bg-slate-100 text-slate-500' :
-              'bg-green-50 text-green-600'
-          }`}>
+        <span
+          className="text-[11px] font-semibold px-2 py-1 rounded-full"
+          style={threadStatusStyle}
+        >
           {thread.status.charAt(0).toUpperCase() + thread.status.slice(1)}
         </span>
       </div>
 
       {/* Exchange Cards (pinned) */}
       {exchanges.length > 0 && (
-        <div className="bg-white border-b border-black/5 px-3 py-2 space-y-2 flex-shrink-0">
+        <div
+          className="px-3 py-2 space-y-2 flex-shrink-0"
+          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+        >
           {exchanges.map((ex) => {
-            const statusStyle = getExchangeStatusColor(ex.status);
+            const exStatusStyle = getExchangeStatusDark(ex.status);
             return (
               <button
                 key={ex._id}
                 onClick={() => navigate(`/exchanges/${ex._id}`)}
-                className="w-full flex items-center gap-3 bg-indigo-50 rounded-xl p-3 text-left transition-all duration-150 active:scale-[0.99]"
+                className="w-full flex items-center gap-3 rounded-xl p-3 text-left transition-all duration-150 active:scale-[0.99]"
+                style={{ background: 'rgba(245,196,0,0.06)', border: '1px solid rgba(245,196,0,0.12)' }}
               >
-                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                  <ArrowLeftRight size={14} className="text-indigo-600" />
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(245,196,0,0.12)', color: 'var(--primary)' }}
+                >
+                  <ArrowLeftRight size={14} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-indigo-800 truncate">
+                  <p className="text-xs font-semibold truncate" style={{ color: 'var(--text)' }}>
                     {ex.tradeInBrand} {ex.tradeInModel} → {ex.desiredPhone?.phoneType ?? 'Unknown'}
                   </p>
-                  <p className="text-[11px] text-indigo-500">
+                  <p className="text-[11px]" style={{ color: 'var(--muted)' }}>
                     Pay {formatETB(ex.finalDifference)}
                   </p>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${statusStyle.bg} ${statusStyle.color}`}>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={exStatusStyle}
+                >
                   {ex.status}
                 </span>
               </button>
@@ -154,9 +205,9 @@ export default function ThreadDetail() {
         {grouped.map(({ date, messages: msgs }) => (
           <div key={date}>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-[11px] text-gray-400 font-medium px-2">{date}</span>
-              <div className="flex-1 h-px bg-gray-200" />
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+              <span className="text-[11px] font-medium px-2" style={{ color: 'var(--muted)' }}>{date}</span>
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
             </div>
             <div className="space-y-2">
               {msgs.map((msg) => {
@@ -167,13 +218,19 @@ export default function ThreadDetail() {
                     className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-xl px-3.5 py-2.5 ${isAdmin
-                          ? 'bg-indigo-600 text-white rounded-br-sm'
-                          : 'bg-white text-slate-800 rounded-bl-sm shadow-sm border border-black/5'
-                        }`}
+                      className={`max-w-[80%] rounded-xl px-3.5 py-2.5 ${isAdmin ? 'rounded-br-sm' : 'rounded-bl-sm'}`}
+                      style={isAdmin
+                        ? { background: 'rgba(245,196,0,0.18)', border: '1px solid rgba(245,196,0,0.25)' }
+                        : { background: 'var(--surface-2)', border: '1px solid var(--border)' }
+                      }
                     >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                      <p className={`text-[10px] mt-1 ${isAdmin ? 'text-indigo-200' : 'text-slate-400'} text-right`}>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text)' }}>
+                        {msg.text}
+                      </p>
+                      <p
+                        className="text-[10px] mt-1 text-right"
+                        style={{ color: isAdmin ? 'rgba(245,196,0,0.55)' : 'var(--muted)' }}
+                      >
                         {formatTime(msg.createdAt)}
                       </p>
                     </div>
@@ -188,27 +245,39 @@ export default function ThreadDetail() {
 
       {/* Input */}
       {thread.status !== 'done' ? (
-        <div className="bg-white border-t border-black/5 px-3 py-3 flex items-end gap-2 flex-shrink-0">
+        <div
+          className="px-3 py-3 flex items-end gap-2 flex-shrink-0"
+          style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)' }}
+        >
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 bg-slate-100 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none resize-none max-h-32 overflow-y-auto"
-            style={{ minHeight: '42px' }}
+            className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none resize-none max-h-32 overflow-y-auto"
+            style={{
+              background: 'var(--surface-2)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+              minHeight: '42px',
+            }}
           />
           <button
             onClick={handleSend}
             disabled={!text.trim() || sending}
-            className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0 btn-interactive disabled:opacity-40"
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 btn-interactive disabled:opacity-40"
+            style={{ background: 'var(--primary)' }}
           >
-            <Send size={16} className="text-white" />
+            <Send size={16} style={{ color: 'var(--primary-foreground)' }} />
           </button>
         </div>
       ) : (
-        <div className="bg-white border-t border-black/5 px-4 py-3 text-center flex-shrink-0">
-          <p className="text-xs text-slate-400">This thread is closed. Customer can reopen by sending a message.</p>
+        <div
+          className="px-4 py-3 text-center flex-shrink-0"
+          style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)' }}
+        >
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>This thread is closed. Customer can reopen by sending a message.</p>
         </div>
       )}
     </div>

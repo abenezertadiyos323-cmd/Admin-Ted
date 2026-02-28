@@ -11,7 +11,7 @@ export default function KpiCard({
   title,
   value,
   comparison,
-  comparisonColor = 'text-gray-400',
+  comparisonColor = 'text-muted',
   onClick,
 }: KpiCardProps) {
   if (onClick) {
@@ -19,14 +19,15 @@ export default function KpiCard({
       <button
         type="button"
         onClick={onClick}
-        className="bg-white rounded-2xl p-4 shadow-sm border border-black/5 text-left w-full active:scale-[0.98] transition-transform cursor-pointer"
+        className="rounded-2xl p-4 shadow-sm text-left w-full active:scale-[0.98] transition-transform cursor-pointer"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
       >
         <KpiCardContent title={title} value={value} comparison={comparison} comparisonColor={comparisonColor} />
       </button>
     );
   }
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5 text-left w-full">
+    <div className="rounded-2xl p-4 shadow-sm text-left w-full" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
       <KpiCardContent title={title} value={value} comparison={comparison} comparisonColor={comparisonColor} />
     </div>
   );
@@ -41,11 +42,11 @@ function KpiCardContent({
   return (
     <>
       {/* Title: wraps up to 2 lines, never truncates */}
-      <p className="text-xs text-gray-500 font-medium leading-snug">
+      <p className="text-xs font-medium leading-snug" style={{ color: 'var(--muted)' }}>
         {title}
       </p>
       {/* Big number */}
-      <p className="text-3xl font-bold text-gray-900 mt-1 leading-none">{value}</p>
+      <p className="text-3xl font-bold mt-1 leading-none" style={{ color: 'var(--text)' }}>{value}</p>
       {/* Comparison line */}
       {comparison != null && (
         <p className={`text-xs mt-1.5 leading-snug ${comparisonColor}`}>{comparison}</p>

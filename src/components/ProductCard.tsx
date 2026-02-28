@@ -1,15 +1,20 @@
 import { Lock } from 'lucide-react';
 import type { Product } from '../types';
-import { formatETB, getStockStatus } from '../lib/utils';
+import { formatETB } from '../lib/utils';
 
 interface ProductCardProps {
   product: Product;
   onClick: () => void;
 }
 
+function getStockStyleDark(qty: number): { background: string; color: string } {
+  if (qty === 0) return { background: 'rgba(239,68,68,0.15)', color: '#F87171' };
+  if (qty <= 2) return { background: 'rgba(245,158,11,0.15)', color: '#FCD34D' };
+  return { background: 'rgba(16,185,129,0.15)', color: '#34D399' };
+}
+
 export default function ProductCard({ product, onClick }: ProductCardProps) {
   const stockQuantity = typeof product.stockQuantity === 'number' ? product.stockQuantity : 0;
-  const stock = getStockStatus(stockQuantity);
   const images = Array.isArray(product.images) ? product.images : [];
   const imageUrl = images[0]?.url;
   const phoneType = typeof product.phoneType === 'string' && product.phoneType.trim().length > 0
@@ -19,6 +24,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
     ? product.storage
     : undefined;
   const priceLabel = typeof product.price === 'number' ? formatETB(product.price) : 'N/A';
+  const stockStyle = getStockStyleDark(stockQuantity);
 
   return (
     <button
@@ -26,7 +32,10 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
       className="card-interactive p-3 flex items-center gap-3 w-full text-left"
     >
       {/* Image */}
-      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+      <div
+        className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0"
+        style={{ background: 'var(--surface-2)' }}
+      >
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -34,7 +43,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
+          <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>
             No img
           </div>
         )}
@@ -44,24 +53,33 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">
           {product.exchangeEnabled ? (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+              style={{ background: 'rgba(16,185,129,0.15)', color: '#34D399' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#34D399' }} />
               Exchange
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700">
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+              style={{ background: 'rgba(245,158,11,0.15)', color: '#FCD34D' }}
+            >
               <Lock size={10} />
               Locked
             </span>
           )}
         </div>
-        <p className="text-sm font-semibold text-gray-900 truncate">{phoneType}</p>
+        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{phoneType}</p>
         {storage && (
-          <p className="text-xs text-gray-500">{storage}</p>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{storage}</p>
         )}
         <div className="flex items-center justify-between mt-1">
-          <span className="text-sm font-bold text-blue-600">{priceLabel}</span>
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${stock.bg} ${stock.color}`}>
+          <span className="text-sm font-bold" style={{ color: 'var(--primary)' }}>{priceLabel}</span>
+          <span
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            style={stockStyle}
+          >
             {stockQuantity === 0 ? 'Out' : `${stockQuantity} left`}
           </span>
         </div>

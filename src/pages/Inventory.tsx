@@ -79,19 +79,29 @@ const toSafeProducts = (value: unknown): Product[] => (
 
 function InventoryErrorFallback({ error }: { error: Error }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl bg-white border border-red-100 rounded-2xl p-5 shadow-sm">
-        <h1 className="text-lg font-semibold text-gray-900 mb-2">Inventory failed to render</h1>
-        <p className="text-sm text-gray-700 mb-3">{error.message || 'Unknown error'}</p>
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: 'var(--bg)' }}
+    >
+      <div
+        className="w-full max-w-2xl rounded-2xl p-5 shadow-sm"
+        style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.3)' }}
+      >
+        <h1 className="text-lg font-semibold mb-2" style={{ color: 'var(--text)' }}>Inventory failed to render</h1>
+        <p className="text-sm mb-3" style={{ color: 'var(--muted)' }}>{error.message || 'Unknown error'}</p>
         {error.stack && (
-          <pre className="text-xs text-red-700 bg-red-50 rounded-xl p-3 overflow-x-auto mb-4 whitespace-pre-wrap">
+          <pre
+            className="text-xs rounded-xl p-3 overflow-x-auto mb-4 whitespace-pre-wrap"
+            style={{ color: '#F87171', background: 'rgba(239,68,68,0.1)' }}
+          >
             {error.stack}
           </pre>
         )}
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold active:scale-95 transition-transform"
+          className="w-full py-2.5 rounded-xl text-sm font-semibold active:scale-95 transition-transform"
+          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
         >
           Retry
         </button>
@@ -102,14 +112,17 @@ function InventoryErrorFallback({ error }: { error: Error }) {
 
 function ProductSkeleton() {
   return (
-    <div className="bg-white rounded-2xl p-3 flex gap-3 border border-gray-100 shadow-sm">
-      <div className="w-16 h-16 rounded-xl bg-gray-100 animate-pulse flex-shrink-0" />
+    <div
+      className="rounded-2xl p-3 flex gap-3"
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+    >
+      <div className="w-16 h-16 rounded-xl bg-surface-2 animate-pulse flex-shrink-0" />
       <div className="flex-1 py-1 space-y-2">
-        <div className="h-2.5 bg-gray-100 rounded-full animate-pulse w-1/3" />
-        <div className="h-3.5 bg-gray-100 rounded-full animate-pulse w-2/3" />
-        <div className="h-2.5 bg-gray-100 rounded-full animate-pulse w-1/4" />
+        <div className="h-2.5 bg-surface-2 rounded-full animate-pulse w-1/3" />
+        <div className="h-3.5 bg-surface-2 rounded-full animate-pulse w-2/3" />
+        <div className="h-2.5 bg-surface-2 rounded-full animate-pulse w-1/4" />
       </div>
-      <div className="w-14 h-5 bg-gray-100 rounded-full animate-pulse self-center" />
+      <div className="w-14 h-5 bg-surface-2 rounded-full animate-pulse self-center" />
     </div>
   );
 }
@@ -339,22 +352,32 @@ function InventoryContent() {
     ? confirmDecrementProduct.phoneType
     : 'Unnamed product';
 
+  const inputStyle = {
+    background: 'var(--surface-2)',
+    color: 'var(--text)',
+    border: '1px solid var(--border)',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
       {/* Sticky title row only */}
       <div
-        className="sticky top-0 z-30 bg-white border-b border-gray-100"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        className="sticky top-0 z-30"
+        style={{
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+        }}
       >
         <div className="px-4 pt-3 pb-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Inventory</h1>
           </div>
         </div>
       </div>
 
       {/* Search + tabs — scrolls with content */}
-      <div className="bg-white border-b border-gray-100">
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         <div className="px-4 pt-2 pb-0">
           {/* Search bar + filter button */}
           <div className="flex gap-2 mb-2">
@@ -362,12 +385,14 @@ function InventoryContent() {
               {showLoader ? (
                 <Loader2
                   size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 animate-spin pointer-events-none"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 animate-spin pointer-events-none"
+                  style={{ color: 'var(--primary)' }}
                 />
               ) : (
                 <Search
                   size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--muted)' }}
                 />
               )}
               <input
@@ -379,7 +404,8 @@ function InventoryContent() {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={handleSearchBlur}
-                className="w-full bg-gray-100 rounded-xl pl-9 pr-9 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+                className="w-full rounded-xl pl-9 pr-9 py-2.5 text-sm outline-none transition-colors"
+                style={inputStyle}
               />
               {searchQuery && (
                 <button
@@ -387,7 +413,8 @@ function InventoryContent() {
                     e.preventDefault();
                     setSearchQuery('');
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 active:scale-90 transition-transform"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 active:scale-90 transition-transform"
+                  style={{ color: 'var(--muted)' }}
                 >
                   <X size={15} />
                 </button>
@@ -397,11 +424,15 @@ function InventoryContent() {
             <button
               type="button"
               onClick={openDrawer}
-              className="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 active:scale-95 transition-transform"
+              className="relative flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
+              style={{ background: 'var(--surface-2)', color: 'var(--muted)' }}
             >
               <SlidersHorizontal size={16} />
               {activeFilterCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600" />
+                <span
+                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                  style={{ background: 'var(--primary)' }}
+                />
               )}
             </button>
           </div>
@@ -410,10 +441,11 @@ function InventoryContent() {
           {showHistoryChips && (
             <div className="pb-2">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] text-gray-400 font-medium">Recent searches</span>
+                <span className="text-[11px] font-medium" style={{ color: 'var(--muted)' }}>Recent searches</span>
                 <button
                   onMouseDown={handleClearHistory}
-                  className="text-[11px] text-blue-500 font-medium active:opacity-70"
+                  className="text-[11px] font-medium active:opacity-70"
+                  style={{ color: 'var(--primary)' }}
                 >
                   Clear all
                 </button>
@@ -423,7 +455,8 @@ function InventoryContent() {
                   <button
                     key={h}
                     onMouseDown={() => applyHistoryChip(h)}
-                    className="px-2.5 py-1 bg-gray-100 rounded-lg text-xs text-gray-700 font-medium active:scale-95 transition-transform"
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+                    style={{ background: 'var(--surface-2)', color: 'var(--text)' }}
                   >
                     {h}
                   </button>
@@ -434,7 +467,7 @@ function InventoryContent() {
         </div>
 
         {/* Type tabs */}
-        <div className="flex border-b border-gray-100 px-4">
+        <div className="flex px-4" style={{ borderBottom: '1px solid var(--border)' }}>
           {PRODUCT_TABS.map((pt) => (
             <button
               key={pt.key}
@@ -442,33 +475,39 @@ function InventoryContent() {
                 if (pt.key === 'accessory' && tab === 'exchangeEnabled') setTab('all');
                 setActiveType(pt.key);
               }}
-              className={`flex-1 py-2.5 text-sm font-semibold relative transition-colors ${
-                activeType === pt.key ? 'text-blue-600' : 'text-gray-500'
-              }`}
+              className="flex-1 py-2.5 text-sm font-semibold relative transition-colors"
+              style={{ color: activeType === pt.key ? 'var(--primary)' : 'var(--muted)' }}
             >
               {pt.label}
               {activeType === pt.key && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
+                  style={{ background: 'var(--primary)' }}
+                />
               )}
             </button>
           ))}
         </div>
 
-        {/* Status filter chips — All, In Stock, Low Stock, Out of Stock, Exchange, Archived */}
-        <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide border-b border-gray-100">
+        {/* Status filter chips */}
+        <div
+          className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide"
+          style={{ borderBottom: '1px solid var(--border)' }}
+        >
           {FILTER_TABS.filter((ft) => !(ft.key === 'exchangeEnabled' && activeType === 'accessory')).map((ft) => (
             <button
               key={ft.key}
               onClick={() => setTab(ft.key)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                tab === ft.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+              style={tab === ft.key
+                ? { background: 'var(--primary)', color: 'var(--primary-foreground)' }
+                : { background: 'var(--surface-2)', color: 'var(--muted)' }
+              }
             >
               {ft.label}
             </button>
           ))}
         </div>
-
       </div>
 
       {/* Product list */}
@@ -492,7 +531,7 @@ function InventoryContent() {
           />
         ) : (
           <div className="space-y-2">
-            <p className="text-xs text-gray-400 font-medium mb-2">
+            <p className="text-xs font-medium mb-2" style={{ color: 'var(--muted)' }}>
               {products.length} product{products.length !== 1 ? 's' : ''}
               {tab !== 'all' ? ` · ${FILTER_TABS.find((ft) => ft.key === tab)?.label ?? ''}` : ''}
             </p>
@@ -517,18 +556,20 @@ function InventoryContent() {
                       type="button"
                       onClick={() => handleDecrementRequest(product)}
                       disabled={stockQuantity === 0 || isPending}
-                      className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                      className="w-8 h-8 rounded-lg text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                      style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
                     >
                       -
                     </button>
-                    <span className="w-7 text-center text-sm font-semibold text-gray-700">
+                    <span className="w-7 text-center text-sm font-semibold" style={{ color: 'var(--text)' }}>
                       {stockQuantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleIncrement(product)}
                       disabled={isPending}
-                      className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-700 text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                      className="w-8 h-8 rounded-lg text-base font-bold leading-none active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100"
+                      style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
                     >
                       +
                     </button>
@@ -544,19 +585,23 @@ function InventoryContent() {
       {confirmDecrementProduct && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40">
           <div
-            className="bg-white rounded-t-3xl w-full p-5 animate-in slide-in-from-bottom duration-200"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+            className="rounded-t-3xl w-full p-5 animate-in slide-in-from-bottom duration-200"
+            style={{
+              background: 'var(--surface)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+            }}
           >
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-            <h2 className="text-base font-bold text-gray-900 mb-1">Confirm stock decrease</h2>
-            <p className="text-xs text-gray-500 mb-4">
+            <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--border)' }} />
+            <h2 className="text-base font-bold mb-1" style={{ color: 'var(--text)' }}>Confirm stock decrease</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>
               {`${confirmProductName}: ${confirmProductStock} -> ${Math.max(0, confirmProductStock - 1)}`}
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmDecrementProduct(null)}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm active:scale-95 transition-transform"
+                className="flex-1 py-3 rounded-xl font-semibold text-sm active:scale-95 transition-transform"
+                style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}
               >
                 Cancel
               </button>
@@ -564,7 +609,8 @@ function InventoryContent() {
                 type="button"
                 onClick={handleConfirmDecrement}
                 disabled={!confirmProductId || pendingProductIds.has(confirmProductId)}
-                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
+                className="flex-1 py-3 rounded-xl font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
+                style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
               >
                 Yes
               </button>
@@ -583,19 +629,23 @@ function InventoryContent() {
           />
           {/* Sheet */}
           <div
-            className="relative bg-white rounded-t-3xl w-full animate-in slide-in-from-bottom duration-200"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+            className="relative rounded-t-3xl w-full animate-in slide-in-from-bottom duration-200"
+            style={{
+              background: 'var(--surface)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+            }}
           >
             {/* Handle */}
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1" />
+            <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-1" style={{ background: 'var(--border)' }} />
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3">
-              <h2 className="text-base font-bold text-gray-900">Filters</h2>
+              <h2 className="text-base font-bold" style={{ color: 'var(--text)' }}>Filters</h2>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:scale-90 transition-transform"
+                className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                style={{ background: 'var(--surface-2)', color: 'var(--muted)' }}
               >
                 <X size={14} />
               </button>
@@ -606,7 +656,7 @@ function InventoryContent() {
 
               {/* Condition */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Condition</p>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Condition</p>
                 <div className="flex gap-2 flex-wrap">
                   {CONDITIONS.map((c) => (
                     <button
@@ -618,11 +668,11 @@ function InventoryContent() {
                           condition: prev.condition === c.value ? undefined : c.value,
                         }))
                       }
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                        draftFilters.condition === c.value
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-600 border-gray-200'
-                      }`}
+                      className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                      style={draftFilters.condition === c.value
+                        ? { background: 'var(--primary)', color: 'var(--primary-foreground)', border: '1px solid var(--primary)' }
+                        : { background: 'var(--surface-2)', color: 'var(--muted)', border: '1px solid var(--border)' }
+                      }
                     >
                       {c.label}
                     </button>
@@ -632,7 +682,7 @@ function InventoryContent() {
 
               {/* Price Range */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price Range (ETB)</p>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Price Range (ETB)</p>
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
@@ -644,9 +694,10 @@ function InventoryContent() {
                         priceMin: e.target.value ? Number(e.target.value) : undefined,
                       }))
                     }
-                    className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+                    className="flex-1 rounded-xl px-3 py-2 text-sm outline-none transition-colors"
+                    style={inputStyle}
                   />
-                  <span className="text-gray-400 text-sm font-medium">–</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>–</span>
                   <input
                     type="number"
                     placeholder="Max ETB"
@@ -657,15 +708,16 @@ function InventoryContent() {
                         priceMax: e.target.value ? Number(e.target.value) : undefined,
                       }))
                     }
-                    className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+                    className="flex-1 rounded-xl px-3 py-2 text-sm outline-none transition-colors"
+                    style={inputStyle}
                   />
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1.5">Leave empty to ignore price filtering.</p>
+                <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>Leave empty to ignore price filtering.</p>
               </div>
 
               {/* Storage */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Storage</p>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Storage</p>
                 <select
                   value={draftFilters.storageGb ?? ''}
                   onChange={(e) =>
@@ -674,7 +726,8 @@ function InventoryContent() {
                       storageGb: e.target.value ? Number(e.target.value) : undefined,
                     }))
                   }
-                  className="w-full bg-gray-100 rounded-xl px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors appearance-none"
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none transition-colors appearance-none"
+                  style={inputStyle}
                 >
                   <option value="">Any</option>
                   {STORAGE_OPTIONS.map((gb) => (
@@ -688,7 +741,7 @@ function InventoryContent() {
               {/* Has Images */}
               <div>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-700">Only show products with images</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Only show products with images</p>
                   <button
                     type="button"
                     onClick={() =>
@@ -697,9 +750,8 @@ function InventoryContent() {
                         hasImages: prev.hasImages ? undefined : true,
                       }))
                     }
-                    className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-3 ${
-                      draftFilters.hasImages ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
+                    className="relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-3"
+                    style={{ background: draftFilters.hasImages ? 'var(--primary)' : 'var(--surface-2)' }}
                   >
                     <span
                       className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
@@ -708,7 +760,7 @@ function InventoryContent() {
                     />
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">Turn on to hide products without photos.</p>
+                <p className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>Turn on to hide products without photos.</p>
               </div>
 
             </div>
@@ -718,14 +770,16 @@ function InventoryContent() {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm active:scale-95 transition-transform"
+                className="flex-1 py-3 rounded-xl font-semibold text-sm active:scale-95 transition-transform"
+                style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={handleApplyFilters}
-                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:scale-95 transition-transform"
+                className="flex-1 py-3 rounded-xl font-semibold text-sm active:scale-95 transition-transform"
+                style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
               >
                 Apply Filters
               </button>
