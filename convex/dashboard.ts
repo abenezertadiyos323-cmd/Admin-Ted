@@ -240,3 +240,120 @@ export const getHomeMetrics = query({
     };
   },
 });
+
+// ── Demand Metrics (new Home dashboard cards) ───────────────────────────────
+
+export const getDemandMetrics = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const { todayStart } = ethDayBoundaries(now);
+    const week7Start = now - 7 * 86_400_000;
+    const month30Start = now - 30 * 86_400_000;
+
+    // ── Conversations ─────────────────────────────────────────────────────────
+    const allThreads = await ctx.db.query("threads").collect();
+
+    // Total: threads with any customer message activity in window
+    const totalConvToday = allThreads.filter(
+      (t) => t.lastCustomerMessageAt != null && t.lastCustomerMessageAt >= todayStart
+    ).length;
+    const totalConv7d = allThreads.filter(
+      (t) => t.lastCustomerMessageAt != null && t.lastCustomerMessageAt >= week7Start
+    ).length;
+    const totalConv30d = allThreads.filter(
+      (t) => t.lastCustomerMessageAt != null && t.lastCustomerMessageAt >= month30Start
+    ).length;
+
+    // First-time: thread's very first customer message is in window
+    const firstConvToday = allThreads.filter(
+      (t) => t.firstMessageAt != null && t.firstMessageAt >= todayStart
+    ).length;
+    const firstConv7d = allThreads.filter(
+      (t) => t.firstMessageAt != null && t.firstMessageAt >= week7Start
+    ).length;
+    const firstConv30d = allThreads.filter(
+      (t) => t.firstMessageAt != null && t.firstMessageAt >= month30Start
+    ).length;
+
+    // ── Phone type demand (from exchanges created in last 7d) ─────────────────
+    // selectSignals = exchange submissions for a given phoneType
+    // botSignals / searchSignals: TODO wire to dedicated event tables when available
+    const exchanges7d = await ctx.db
+      .query("exchanges")
+      .withIndex("by_createdAt", (q) => q.gte("createdAt", week7Start))
+      .collect();
+
+    // Resolve phoneType for each unique desiredPhoneId (minimise db.get calls)
+    const uniqueProductIds = [...new Set(exchanges7d.map((e) => e.desiredPhoneId))];
+    const phoneTypeMap = new Map<string, string>();
+    for (const pid of uniqueProductIds) {
+      const product = await ctx.db.get(pid);
+      if (product?.phoneType) {
+        phoneTypeMap.set(pid, product.phoneType);
+      }
+    }
+
+    // Count select signals per phoneType
+    const signalMap = new Map<string, number>();
+    for (const ex of exchanges7d) {
+      const pt = phoneTypeMap.get(ex.desiredPhoneId);
+      if (!pt) continue;
+      signalMap.set(pt, (signalMap.get(pt) ?? 0) + 1);
+    }
+
+    const sortedByDemand = [...signalMap.entries()].sort((a, b) => b[1] - a[1]);
+
+    const topPhoneTypes = sortedByDemand.slice(0, 3).map(([phoneType, count]) => ({
+      phoneType,
+      totalSignals: count,
+      botSignals: 0,    // TODO: wire to bot/NLP signal events when available
+      searchSignals: 0, // TODO: wire to search event table when available
+      selectSignals: count,
+    }));
+
+    // ── Active inventory by phoneType ─────────────────────────────────────────
+    const activeProducts = await ctx.db
+      .query("products")
+      .withIndex("by_isArchived_createdAt", (q) => q.eq("isArchived", false))
+      .collect();
+
+    const stockByPhoneType = new Map<string, number>();
+    for (const p of activeProducts) {
+      if (!p.phoneType) continue;
+      stockByPhoneType.set(
+        p.phoneType,
+        (stockByPhoneType.get(p.phoneType) ?? 0) + p.stockQuantity
+      );
+    }
+
+    // Requested but not available: top demanded phone types with 0 active stock
+    const notAvailable = sortedByDemand
+      .filter(([phoneType]) => (stockByPhoneType.get(phoneType) ?? 0) === 0)
+      .slice(0, 3)
+      .map(([phoneType, count]) => ({ phoneType, totalSignals: count }));
+
+    // Top 5 demanded with stock info (for Restock Suggestions modal)
+    const restockData = sortedByDemand.slice(0, 5).map(([phoneType, count]) => ({
+      phoneType,
+      totalSignals: count,
+      availableStock: stockByPhoneType.get(phoneType) ?? 0,
+    }));
+
+    // Available stock snapshot sorted by qty desc (for Content Plan modal)
+    const availableStock = activeProducts
+      .filter((p) => p.stockQuantity > 0 && p.phoneType)
+      .sort((a, b) => b.stockQuantity - a.stockQuantity)
+      .slice(0, 8)
+      .map((p) => ({ phoneType: p.phoneType!, stock: p.stockQuantity, price: p.price }));
+
+    return {
+      totalConversations: { today: totalConvToday, week7: totalConv7d, month30: totalConv30d },
+      firstTimeConversations: { today: firstConvToday, week7: firstConv7d, month30: firstConv30d },
+      topPhoneTypes,
+      notAvailable,
+      restockData,
+      availableStock,
+    };
+  },
+});

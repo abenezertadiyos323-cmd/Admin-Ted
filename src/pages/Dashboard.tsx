@@ -3,26 +3,157 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Settings as SettingsIcon, X } from 'lucide-react';
-import KpiCard from '../components/KpiCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getTelegramUser } from '../lib/telegram';
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Multi-value card (Today / 7d / 30d) ───────────────────────────────────
 
-function deltaSign(n: number): string {
-  return n > 0 ? `+${n}` : `${n}`;
+function MultiValueCard({
+  title,
+  today,
+  week7,
+  month30,
+}: {
+  title: string;
+  today: number;
+  week7: number;
+  month30: number;
+}) {
+  const segments: [string, number][] = [
+    ['Today', today],
+    ['7d', week7],
+    ['30d', month30],
+  ];
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5">
+      <p className="text-xs text-gray-500 font-medium mb-3">{title}</p>
+      <div className="grid grid-cols-3 divide-x divide-gray-100">
+        {segments.map(([label, val]) => (
+          <div key={label} className="text-center px-2 first:pl-0 last:pr-0">
+            <p className="text-2xl font-bold text-gray-900 leading-none">{val}</p>
+            <p className="text-[10px] text-gray-400 mt-1 font-medium">{label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function replyDot(minutes: number): string {
-  if (minutes <= 10) return '🟢';
-  if (minutes <= 30) return '🟡';
-  return '🔴';
+// ── Top 3 Phone Types card ─────────────────────────────────────────────────
+
+function PhoneTypesCard({
+  items,
+}: {
+  items: Array<{
+    phoneType: string;
+    totalSignals: number;
+    botSignals: number;
+    searchSignals: number;
+    selectSignals: number;
+  }>;
+}) {
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5">
+      <p className="text-xs text-gray-500 font-medium mb-3">Top 3 Requested (7d)</p>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-2">No exchange data yet</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item, idx) => (
+            <div key={item.phoneType} className="flex items-start gap-2">
+              <span className="text-xs font-bold text-gray-400 w-4 flex-shrink-0 mt-0.5 tabular-nums">
+                {idx + 1}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{item.phoneType}</p>
+                  <span className="text-sm font-bold text-gray-900 flex-shrink-0">
+                    {item.totalSignals}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  Bot: {item.botSignals} · Search: {item.searchSignals} · Sel:{' '}
+                  {item.selectSignals}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
-// ── Broadcast Modal (MVP placeholder) ─────────────────────────────────────
+// ── Requested But Not Available section ───────────────────────────────────
 
-function BroadcastModal({ onClose }: { onClose: () => void }) {
-  const [message, setMessage] = useState('');
+function NotAvailableSection({
+  items,
+}: {
+  items: Array<{ phoneType: string; totalSignals: number }>;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        Requested But Not Available (7d)
+      </h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {items.map((item, idx) => (
+          <div
+            key={item.phoneType}
+            className={`flex items-center justify-between px-4 py-3 ${
+              idx < items.length - 1 ? 'border-b border-gray-50' : ''
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-base">⛔</span>
+              <p className="text-sm font-medium text-gray-800">{item.phoneType}</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-gray-700">{item.totalSignals}</span>
+              <span className="text-xs text-red-500 font-medium">not available</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Restock Suggestions Modal ──────────────────────────────────────────────
+
+function RestockModal({
+  data,
+  onClose,
+}: {
+  data: Array<{ phoneType: string; totalSignals: number; availableStock: number }>;
+  onClose: () => void;
+}) {
+  const suggestions = data.map((item) => ({
+    ...item,
+    reason:
+      item.availableStock === 0 ? 'No stock' : `${item.availableStock} in stock`,
+    tier:
+      item.totalSignals >= 8
+        ? 'High (5–10 units)'
+        : item.totalSignals >= 4
+        ? 'Medium (3–5 units)'
+        : 'Low (1–3 units)',
+  }));
+
+  const reportText = suggestions
+    .map(
+      (s, i) =>
+        `${i + 1}. ${s.phoneType}\n   ${s.totalSignals} requests · ${s.reason}\n   Suggested: ${s.tier}`,
+    )
+    .join('\n\n');
+
+  function handleCopy() {
+    navigator.clipboard
+      .writeText(`📦 Restock Suggestions\n\n${reportText}`)
+      .catch(() => undefined);
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-end"
@@ -32,37 +163,191 @@ function BroadcastModal({ onClose }: { onClose: () => void }) {
     >
       <div className="bg-white w-full rounded-t-3xl p-6 space-y-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-bold text-gray-900">📢 Broadcast Promo</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100"
-          >
+          <h3 className="text-lg font-bold text-gray-900">📦 Restock Suggestions</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
-        <select className="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-700 bg-white">
-          <option value="">Select template…</option>
-          <option value="iphone">📱 iPhone deals this week</option>
-          <option value="arrivals">🆕 New arrivals</option>
-          <option value="promo">🎉 Special promo</option>
-        </select>
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Write your message here…"
-          className="w-full border border-gray-200 rounded-xl p-3 text-sm h-28 resize-none text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="button"
-          disabled={!message.trim()}
-          className="w-full bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl py-3 font-semibold text-sm transition-colors"
-        >
-          Send Broadcast
-        </button>
-        <p className="text-[11px] text-gray-400 text-center">
-          Send functionality coming soon
-        </p>
+        {suggestions.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-6">
+            No demand signals in the last 7 days.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {suggestions.map((s, i) => (
+              <div key={s.phoneType} className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-gray-400 tabular-nums">{i + 1}</span>
+                  <p className="text-sm font-semibold text-gray-900">{s.phoneType}</p>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {s.totalSignals} requests · {s.reason}
+                </p>
+                <p className="text-xs font-semibold text-blue-600 mt-1">Suggested: {s.tier}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={suggestions.length === 0}
+            className="flex-1 border border-gray-200 text-gray-700 rounded-xl py-3 font-semibold text-sm disabled:opacity-40 active:scale-[0.98] transition-transform"
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 bg-blue-600 text-white rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Content Plan Modal ────────────────────────────────────────────────────
+
+const GENERIC_TOPICS = [
+  'Trading in your phone?',
+  'Warranty & quality guarantee',
+  'How we price phones',
+  'Customer testimonials',
+  'Fast delivery info',
+  'Best deals this week',
+  'Why buy from TedyTech',
+];
+
+function getHook(phoneType: string): string {
+  const lower = phoneType.toLowerCase();
+  if (lower.includes('iphone')) return `Is the ${phoneType} worth it in 2025? 👀`;
+  if (lower.includes('samsung')) return `Why everyone wants the ${phoneType} right now 🔥`;
+  if (lower.includes('deals') || lower.includes('best')) return `Best phone deals you can't miss 🔥`;
+  if (lower.includes('warranty') || lower.includes('quality')) return `How we guarantee quality on every phone 🛡️`;
+  if (lower.includes('trading') || lower.includes('trade')) return `Get cash for your old phone — here's how 💸`;
+  if (lower.includes('delivery')) return `Order today, get it tomorrow ⚡`;
+  return `${phoneType} — here's what our customers keep asking about 📱`;
+}
+
+function ContentPlanModal({
+  topPhoneTypes,
+  availableStock,
+  onClose,
+}: {
+  topPhoneTypes: Array<{ phoneType: string; totalSignals: number }>;
+  availableStock: Array<{ phoneType: string; stock: number; price: number }>;
+  onClose: () => void;
+}) {
+  const stockMap = new Map(availableStock.map((s) => [s.phoneType, s]));
+
+  const seen = new Set<string>();
+  const topics: Array<{ phoneType: string; price: number | null; inStock: boolean }> = [];
+
+  // Fill from top demanded phones first
+  for (const pt of topPhoneTypes) {
+    if (seen.has(pt.phoneType)) continue;
+    seen.add(pt.phoneType);
+    const s = stockMap.get(pt.phoneType);
+    topics.push({
+      phoneType: pt.phoneType,
+      price: s?.price ?? null,
+      inStock: s != null && s.stock > 0,
+    });
+  }
+
+  // Then fill from available inventory
+  for (const s of availableStock) {
+    if (topics.length >= 7) break;
+    if (seen.has(s.phoneType)) continue;
+    seen.add(s.phoneType);
+    topics.push({ phoneType: s.phoneType, price: s.price, inStock: true });
+  }
+
+  // Pad remaining days with generic content topics
+  while (topics.length < 7) {
+    const genericTopic = GENERIC_TOPICS[topics.length % GENERIC_TOPICS.length];
+    topics.push({ phoneType: genericTopic, price: null, inStock: false });
+  }
+
+  const planLines = topics.slice(0, 7).map((d, i) => {
+    const mentionParts: string[] = [];
+    if (d.price != null) mentionParts.push(`From ${d.price.toLocaleString()} ETB`);
+    mentionParts.push(d.inStock ? 'In stock NOW' : 'Coming soon');
+    mentionParts.push('Fast delivery · Warranty');
+    return {
+      day: i + 1,
+      topic: d.phoneType,
+      hook: getHook(d.phoneType),
+      mention: mentionParts.join(' · '),
+      cta: 'DM on Telegram / Open mini app',
+    };
+  });
+
+  const planText = planLines
+    .map(
+      (p) =>
+        `Day ${p.day} — ${p.topic}\nHook: "${p.hook}"\nMention: ${p.mention}\nCTA: ${p.cta}`,
+    )
+    .join('\n\n');
+
+  function handleCopy() {
+    navigator.clipboard
+      .writeText(`📅 7-Day TikTok Plan\n\n${planText}`)
+      .catch(() => undefined);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-end"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white w-full rounded-t-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-bold text-gray-900">📅 Content Plan (7 days)</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          {planLines.map((p) => (
+            <div key={p.day} className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-bold text-blue-600 mb-2">
+                Day {p.day} — {p.topic}
+              </p>
+              <p className="text-xs text-gray-700">
+                <span className="font-medium">Hook:</span> &quot;{p.hook}&quot;
+              </p>
+              <p className="text-xs text-gray-700 mt-1">
+                <span className="font-medium">Mention:</span> {p.mention}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                <span className="font-medium">CTA:</span> {p.cta}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex-1 border border-gray-200 text-gray-700 rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 bg-blue-600 text-white rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -104,12 +389,14 @@ function AlertItem({
 export default function Dashboard() {
   const navigate = useNavigate();
   const user = getTelegramUser();
-  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showRestock, setShowRestock] = useState(false);
+  const [showContentPlan, setShowContentPlan] = useState(false);
   const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   const metrics = useQuery(api.dashboard.getHomeMetrics);
+  const demand = useQuery(api.dashboard.getDemandMetrics);
 
-  if (metrics === undefined) {
+  if (metrics === undefined || demand === undefined) {
     return (
       <div className="flex items-center justify-center h-screen">
         <LoadingSpinner size="lg" />
@@ -117,62 +404,7 @@ export default function Dashboard() {
     );
   }
 
-  // ── KPI values ─────────────────────────────────────────────────────────
-
-  // A — Replies Waiting
-  const kpiA_delta = metrics.repliesWaiting15m - metrics.repliesWaiting15mYesterday;
-  const kpiA_comparison = `${deltaSign(kpiA_delta)} vs yesterday`;
-  const kpiA_compColor =
-    metrics.repliesWaiting15m === 0
-      ? 'text-green-600'
-      : kpiA_delta < 0
-      ? 'text-green-600'  // fewer waiting than yesterday = improvement
-      : kpiA_delta > 0
-      ? 'text-red-500'    // more waiting than yesterday = worse
-      : 'text-amber-500'; // same as yesterday, still has waiting
-
-  // B — First-Time Today
-  const kpiB_pct =
-    metrics.firstTimeYesterday > 0
-      ? Math.round(
-          ((metrics.firstTimeToday - metrics.firstTimeYesterday) /
-            metrics.firstTimeYesterday) *
-            100
-        )
-      : null;
-  const kpiB_comparison =
-    kpiB_pct != null
-      ? `${deltaSign(kpiB_pct)}% vs yesterday`
-      : `${metrics.firstTimeToday} total`;
-  const kpiB_compColor =
-    kpiB_pct != null && kpiB_pct > 0 ? 'text-green-600' : 'text-gray-400';
-
-  // C — Median Reply Time
-  const kpiC_value =
-    metrics.medianReplyToday > 0 ? `${metrics.medianReplyToday} min` : '—';
-  const kpiC_dot =
-    metrics.medianReplyToday > 0 ? replyDot(metrics.medianReplyToday) : '';
-  const kpiC_delta = metrics.medianReplyToday - metrics.medianReplyYesterday;
-  const kpiC_comparison =
-    metrics.medianReplyToday > 0 && metrics.medianReplyYesterday > 0
-      ? kpiC_delta === 0
-        ? `Same as yesterday · ${kpiC_dot}`
-        : `${Math.abs(kpiC_delta)} min ${kpiC_delta < 0 ? 'faster' : 'slower'} · ${kpiC_dot}`
-      : metrics.medianReplyToday > 0
-      ? `${kpiC_dot} today`
-      : 'No data yet';
-  const kpiC_compColor =
-    kpiC_delta < 0 ? 'text-green-600'       // faster = good
-    : kpiC_delta === 0 ? 'text-gray-400'    // same = neutral
-    : kpiC_delta <= 10 ? 'text-amber-500'   // slightly slower
-    : 'text-red-500';                        // much slower
-
-  // D — Phones Sold
-  const kpiD_delta = metrics.phonesSoldToday - metrics.phonesSoldYesterday;
-  const kpiD_comparison = `${deltaSign(kpiD_delta)} vs yesterday`;
-  const kpiD_compColor = kpiD_delta >= 0 ? 'text-green-600' : 'text-red-500';
-
-  // ── Alerts ────────────────────────────────────────────────────────────
+  // ── Alerts ────────────────────────────────────────────────────────────────
 
   const { alerts } = metrics;
   const activeAlerts: { emoji: string; text: string; to?: string }[] = [];
@@ -227,7 +459,6 @@ export default function Dashboard() {
   const PREVIEW = 4;
   const visibleAlerts = showAllAlerts ? activeAlerts : activeAlerts.slice(0, PREVIEW);
   const hasMore = activeAlerts.length > PREVIEW && !showAllAlerts;
-  const followUpDisabled = metrics.followUpPending === 0;
 
   return (
     <>
@@ -256,42 +487,30 @@ export default function Dashboard() {
         </div>
 
         <div className="px-4 py-4 space-y-4">
-          {/* KPI Grid */}
+          {/* Demand Overview */}
           <div>
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Today's Overview
+              Demand Overview
             </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <KpiCard
-                title="Replies Waiting"
-                value={metrics.repliesWaiting15m}
-                comparison={kpiA_comparison}
-                comparisonColor={kpiA_compColor}
-                onClick={() => navigate('/inbox?filter=waiting30')}
+            <div className="space-y-3">
+              <MultiValueCard
+                title="Total Conversations"
+                today={demand.totalConversations.today}
+                week7={demand.totalConversations.week7}
+                month30={demand.totalConversations.month30}
               />
-              <KpiCard
-                title="First-Time Today"
-                value={metrics.firstTimeToday}
-                comparison={kpiB_comparison}
-                comparisonColor={kpiB_compColor}
-                onClick={() => navigate('/inbox?filter=firstContact')}
+              <MultiValueCard
+                title="First-Time Conversations"
+                today={demand.firstTimeConversations.today}
+                week7={demand.firstTimeConversations.week7}
+                month30={demand.firstTimeConversations.month30}
               />
-              <KpiCard
-                title="Median Reply Time"
-                value={kpiC_value}
-                comparison={kpiC_comparison}
-                comparisonColor={kpiC_compColor}
-                onClick={() => navigate('/inbox')}
-              />
-              <KpiCard
-                title="Phones Sold"
-                value={metrics.phonesSoldToday}
-                comparison={kpiD_comparison}
-                comparisonColor={kpiD_compColor}
-                onClick={() => navigate('/exchanges')}
-              />
+              <PhoneTypesCard items={demand.topPhoneTypes} />
             </div>
           </div>
+
+          {/* Requested But Not Available insight */}
+          <NotAvailableSection items={demand.notAvailable} />
 
           {/* Quick Actions */}
           <div>
@@ -301,31 +520,19 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setShowBroadcast(true)}
+                onClick={() => setShowRestock(true)}
                 className="bg-blue-600 text-white rounded-2xl p-4 flex items-center gap-2 active:scale-95 transition-transform shadow-sm"
               >
-                <span className="text-lg leading-none">📢</span>
-                <span className="text-sm font-semibold leading-snug">Broadcast Promo</span>
+                <span className="text-lg leading-none">📦</span>
+                <span className="text-sm font-semibold leading-snug">Restock Suggestions</span>
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  !followUpDisabled && navigate('/inbox?filter=followUp')
-                }
-                disabled={followUpDisabled}
-                className={`rounded-2xl p-4 flex items-center gap-2 transition-transform shadow-sm border ${
-                  followUpDisabled
-                    ? 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white border-gray-100 text-gray-800 active:scale-95'
-                }`}
+                onClick={() => setShowContentPlan(true)}
+                className="bg-white border border-gray-100 text-gray-800 rounded-2xl p-4 flex items-center gap-2 active:scale-95 transition-transform shadow-sm"
               >
-                <span className="text-lg leading-none">💬</span>
-                <span className="text-sm font-semibold leading-snug">
-                  Follow Up ·{' '}
-                  {metrics.followUpPending > 0
-                    ? `${metrics.followUpPending} pending`
-                    : '0 pending'}
-                </span>
+                <span className="text-lg leading-none">📅</span>
+                <span className="text-sm font-semibold leading-snug">Content Plan (7d)</span>
               </button>
             </div>
           </div>
@@ -374,7 +581,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {showBroadcast && <BroadcastModal onClose={() => setShowBroadcast(false)} />}
+      {showRestock && (
+        <RestockModal data={demand.restockData} onClose={() => setShowRestock(false)} />
+      )}
+      {showContentPlan && (
+        <ContentPlanModal
+          topPhoneTypes={demand.topPhoneTypes}
+          availableStock={demand.availableStock}
+          onClose={() => setShowContentPlan(false)}
+        />
+      )}
     </>
   );
 }
