@@ -276,43 +276,45 @@ export const getDemandMetrics = query({
       (t) => t.firstMessageAt != null && t.firstMessageAt >= month30Start
     ).length;
 
-    // ── Phone type demand (from exchanges created in last 7d) ─────────────────
-    // selectSignals = exchange submissions for a given phoneType
-    // botSignals / searchSignals: TODO wire to dedicated event tables when available
-    const exchanges7d = await ctx.db
-      .query("exchanges")
+    // ── Phone type demand (from demand_events in last 7d) ────────────────────
+    // source breakdown: "bot" | "search" | "select"
+    // Log events via demand:logDemandEvent from the bot / mini app.
+    const events7d = await ctx.db
+      .query("demand_events")
       .withIndex("by_createdAt", (q) => q.gte("createdAt", week7Start))
       .collect();
 
-    // Resolve phoneType for each unique desiredPhoneId (minimise db.get calls)
-    const uniqueProductIds = [...new Set(exchanges7d.map((e) => e.desiredPhoneId))];
-    const phoneTypeMap = new Map<string, string>();
-    for (const pid of uniqueProductIds) {
-      const product = await ctx.db.get(pid);
-      if (product?.phoneType) {
-        phoneTypeMap.set(pid, product.phoneType);
-      }
+    // Count by phoneType and source
+    const signalMap = new Map<string, { bot: number; search: number; select: number }>();
+    for (const event of events7d) {
+      const existing = signalMap.get(event.phoneType) ?? { bot: 0, search: 0, select: 0 };
+      if (event.source === "bot") existing.bot++;
+      else if (event.source === "search") existing.search++;
+      else existing.select++;
+      signalMap.set(event.phoneType, existing);
     }
 
-    // Count select signals per phoneType
-    const signalMap = new Map<string, number>();
-    for (const ex of exchanges7d) {
-      const pt = phoneTypeMap.get(ex.desiredPhoneId);
-      if (!pt) continue;
-      signalMap.set(pt, (signalMap.get(pt) ?? 0) + 1);
-    }
+    // Sort by totalSignals descending
+    const sortedByDemand = [...signalMap.entries()]
+      .map(([phoneType, counts]) => ({
+        phoneType,
+        total: counts.bot + counts.search + counts.select,
+        bot: counts.bot,
+        search: counts.search,
+        select: counts.select,
+      }))
+      .sort((a, b) => b.total - a.total);
 
-    const sortedByDemand = [...signalMap.entries()].sort((a, b) => b[1] - a[1]);
-
-    const topPhoneTypes = sortedByDemand.slice(0, 3).map(([phoneType, count]) => ({
-      phoneType,
-      totalSignals: count,
-      botSignals: 0,    // TODO: wire to bot/NLP signal events when available
-      searchSignals: 0, // TODO: wire to search event table when available
-      selectSignals: count,
+    const topPhoneTypes = sortedByDemand.slice(0, 3).map((item) => ({
+      phoneType: item.phoneType,
+      totalSignals: item.total,
+      botSignals: item.bot,
+      searchSignals: item.search,
+      selectSignals: item.select,
     }));
 
     // ── Active inventory by phoneType ─────────────────────────────────────────
+    // "available" = non-archived product with stockQuantity > 0
     const activeProducts = await ctx.db
       .query("products")
       .withIndex("by_isArchived_createdAt", (q) => q.eq("isArchived", false))
@@ -327,17 +329,17 @@ export const getDemandMetrics = query({
       );
     }
 
-    // Requested but not available: top demanded phone types with 0 active stock
+    // Requested but not available: demanded phone types with 0 active in-stock units
     const notAvailable = sortedByDemand
-      .filter(([phoneType]) => (stockByPhoneType.get(phoneType) ?? 0) === 0)
+      .filter((item) => (stockByPhoneType.get(item.phoneType) ?? 0) === 0)
       .slice(0, 3)
-      .map(([phoneType, count]) => ({ phoneType, totalSignals: count }));
+      .map((item) => ({ phoneType: item.phoneType, totalSignals: item.total }));
 
     // Top 5 demanded with stock info (for Restock Suggestions modal)
-    const restockData = sortedByDemand.slice(0, 5).map(([phoneType, count]) => ({
-      phoneType,
-      totalSignals: count,
-      availableStock: stockByPhoneType.get(phoneType) ?? 0,
+    const restockData = sortedByDemand.slice(0, 5).map((item) => ({
+      phoneType: item.phoneType,
+      totalSignals: item.total,
+      availableStock: stockByPhoneType.get(item.phoneType) ?? 0,
     }));
 
     // Available stock snapshot sorted by qty desc (for Content Plan modal)

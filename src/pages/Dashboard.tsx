@@ -56,7 +56,7 @@ function PhoneTypesCard({
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5">
       <p className="text-xs text-gray-500 font-medium mb-3">Top 3 Requested (7d)</p>
       {items.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-2">No exchange data yet</p>
+        <p className="text-sm text-gray-400 text-center py-2">No demand signals yet</p>
       ) : (
         <div className="space-y-3">
           {items.map((item, idx) => (

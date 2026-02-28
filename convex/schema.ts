@@ -289,4 +289,24 @@ export default defineSchema({
     .index("by_editedBy", ["editedBy"])
     .index("by_timestamp", ["timestamp"])
     .index("by_reason", ["reason"]),
+
+  /* =========================
+     DEMAND EVENTS
+  ========================= */
+  demand_events: defineTable({
+    // Which surface generated the signal
+    source: v.union(
+      v.literal("bot"),    // Telegram bot conversation
+      v.literal("search"), // Customer searched in mini app
+      v.literal("select"), // Customer selected/submitted in mini app
+    ),
+    phoneType: v.string(),   // e.g. "iPhone 15 Pro"
+    createdAt: v.number(),
+    userId: v.optional(v.string()),      // Telegram user ID (string)
+    threadId: v.optional(v.id("threads")),
+    meta: v.optional(v.string()),        // JSON-encoded extra context
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_source_and_createdAt", ["source", "createdAt"])
+    .index("by_phoneType_and_createdAt", ["phoneType", "createdAt"]),
 });
