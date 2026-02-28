@@ -1,14 +1,42 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* ============================================================
+   DESIGN TOKENS — dark + yellow theme
+   Use in CSS:     var(--primary), var(--bg), etc.
+   Use in Tailwind: bg-bg, bg-surface, text-muted, bg-primary, etc.
+============================================================ */
 :root {
-  --tg-theme-bg-color: #ffffff;
-  --tg-theme-text-color: #000000;
-  --tg-theme-hint-color: #999999;
-  --tg-theme-link-color: #2481cc;
-  --tg-theme-button-color: #4f46e5; /* indigo-600 */
-  --tg-theme-button-text-color: #ffffff;
-  --tg-theme-secondary-bg-color: #f8fafc; /* slate-50 */
+  --bg:                #0B0F1A;
+  --surface:           #121A2A;
+  --surface-2:         #0F172A;
+  --text:              #EAF0FF;
+  --muted:             #94A3B8;
+  --primary:           #F5C400;
+  --primary-foreground:#0B0F1A;
+  --badge:             #FF2D55;
+  --border:            rgba(255,255,255,0.08);
+
+  /* Telegram theme vars aligned to dark palette */
+  --tg-theme-bg-color:           #0B0F1A;
+  --tg-theme-text-color:         #EAF0FF;
+  --tg-theme-hint-color:         #94A3B8;
+  --tg-theme-link-color:         #F5C400;
+  --tg-theme-button-color:       #F5C400;
+  --tg-theme-button-text-color:  #0B0F1A;
+  --tg-theme-secondary-bg-color: #121A2A;
+}
+
+/* Tailwind v4 custom color tokens */
+@theme {
+  --color-bg:         #0B0F1A;
+  --color-surface:    #121A2A;
+  --color-surface-2:  #0F172A;
+  --color-app-text:   #EAF0FF;
+  --color-muted:      #94A3B8;
+  --color-primary:    #F5C400;
+  --color-primary-fg: #0B0F1A;
+  --color-badge:      #FF2D55;
 }
 
 * {
@@ -24,8 +52,8 @@ html, body, #root {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, sans-serif;
-  background-color: #f8fafc; /* soft slate bg */
-  color: #0f172a; /* slate-900 */
+  background-color: var(--bg);
+  color: var(--text);
   overscroll-behavior: none;
 }
 
@@ -35,7 +63,9 @@ body {
 }
 
 .card-interactive {
-  @apply transition-all duration-150 active:scale-[0.99] bg-white rounded-xl border border-black/5 shadow-sm;
+  @apply transition-all duration-150 active:scale-[0.99] rounded-xl;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }

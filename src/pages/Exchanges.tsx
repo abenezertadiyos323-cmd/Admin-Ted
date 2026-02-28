@@ -59,14 +59,22 @@ export default function Exchanges() {
   const empty = EMPTY_MESSAGES[activeTab];
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 shrink-0 bg-white border-b border-gray-100">
+      <div
+        className="sticky top-0 z-10 shrink-0"
+        style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+      >
         <div className="px-4 pt-4 pb-0">
-          <h1 className="text-xl font-bold text-gray-900 mb-3">Exchanges</h1>
+          <h1 className="text-xl font-bold mb-3" style={{ color: 'var(--text)' }}>Exchanges</h1>
           {filterLabel && (
-            <div className="mx-4 mb-2 flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2">
-              <span className="text-xs font-medium text-blue-700">Filtering: {filterLabel}</span>
+            <div
+              className="mx-4 mb-2 flex items-center gap-2 rounded-xl px-3 py-2"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+            >
+              <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
+                Filtering: {filterLabel}
+              </span>
             </div>
           )}
         </div>
@@ -81,7 +89,7 @@ export default function Exchanges() {
       </div>
 
       {/* Scrollable Exchange List */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 pb-20">
+      <div className="flex-1 overflow-y-auto px-4 py-3 pb-20" style={{ background: 'var(--bg)' }}>
         {loading ? (
           <LoadingSpinner className="py-16" />
         ) : exchanges.length === 0 ? (
@@ -92,7 +100,7 @@ export default function Exchanges() {
           />
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-gray-400 font-medium">
+            <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
               {exchanges.length} exchange{exchanges.length !== 1 ? 's' : ''}
             </p>
             {exchanges.map((exchange) => (

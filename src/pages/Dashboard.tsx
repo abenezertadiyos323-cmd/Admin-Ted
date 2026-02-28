@@ -25,13 +25,20 @@ function MultiValueCard({
     ['30d', month30],
   ];
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5">
-      <p className="text-xs text-gray-500 font-medium mb-3">{title}</p>
-      <div className="grid grid-cols-3 divide-x divide-gray-100">
-        {segments.map(([label, val]) => (
-          <div key={label} className="text-center px-2 first:pl-0 last:pr-0">
-            <p className="text-2xl font-bold text-gray-900 leading-none">{val}</p>
-            <p className="text-[10px] text-gray-400 mt-1 font-medium">{label}</p>
+    <div
+      className="rounded-2xl p-4"
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+    >
+      <p className="text-xs font-medium mb-3" style={{ color: 'var(--muted)' }}>{title}</p>
+      <div className="grid grid-cols-3" style={{ borderRight: 'none' }}>
+        {segments.map(([label, val], i) => (
+          <div
+            key={label}
+            className="text-center px-2 first:pl-0 last:pr-0"
+            style={i > 0 ? { borderLeft: '1px solid var(--border)' } : {}}
+          >
+            <p className="text-2xl font-bold leading-none" style={{ color: 'var(--text)' }}>{val}</p>
+            <p className="text-[10px] mt-1 font-medium" style={{ color: 'var(--muted)' }}>{label}</p>
           </div>
         ))}
       </div>
@@ -53,25 +60,28 @@ function PhoneTypesCard({
   }>;
 }) {
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5">
-      <p className="text-xs text-gray-500 font-medium mb-3">Top 3 Requested (7d)</p>
+    <div
+      className="rounded-2xl p-4"
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+    >
+      <p className="text-xs font-medium mb-3" style={{ color: 'var(--muted)' }}>Top 3 Requested (7d)</p>
       {items.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-2">No demand signals yet</p>
+        <p className="text-sm text-center py-2" style={{ color: 'var(--muted)' }}>No demand signals yet</p>
       ) : (
         <div className="space-y-3">
           {items.map((item, idx) => (
             <div key={item.phoneType} className="flex items-start gap-2">
-              <span className="text-xs font-bold text-gray-400 w-4 flex-shrink-0 mt-0.5 tabular-nums">
+              <span className="text-xs font-bold w-4 flex-shrink-0 mt-0.5 tabular-nums" style={{ color: 'var(--muted)' }}>
                 {idx + 1}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{item.phoneType}</p>
-                  <span className="text-sm font-bold text-gray-900 flex-shrink-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{item.phoneType}</p>
+                  <span className="text-sm font-bold flex-shrink-0" style={{ color: 'var(--text)' }}>
                     {item.totalSignals}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-0.5">
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--muted)' }}>
                   Bot: {item.botSignals} · Search: {item.searchSignals} · Sel:{' '}
                   {item.selectSignals}
                 </p>
@@ -94,24 +104,26 @@ function NotAvailableSection({
   if (items.length === 0) return null;
   return (
     <div>
-      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+      <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--muted)' }}>
         Requested But Not Available (7d)
       </h2>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+      >
         {items.map((item, idx) => (
           <div
             key={item.phoneType}
-            className={`flex items-center justify-between px-4 py-3 ${
-              idx < items.length - 1 ? 'border-b border-gray-50' : ''
-            }`}
+            className="flex items-center justify-between px-4 py-3"
+            style={idx < items.length - 1 ? { borderBottom: '1px solid var(--border)' } : {}}
           >
             <div className="flex items-center gap-2">
               <span className="text-base">⛔</span>
-              <p className="text-sm font-medium text-gray-800">{item.phoneType}</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{item.phoneType}</p>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold text-gray-700">{item.totalSignals}</span>
-              <span className="text-xs text-red-500 font-medium">not available</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{item.totalSignals}</span>
+              <span className="text-xs font-medium text-red-400">not available</span>
             </div>
           </div>
         ))}
@@ -156,34 +168,46 @@ function RestockModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-end"
+      className="fixed inset-0 bg-black/60 z-50 flex items-end"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white w-full rounded-t-3xl p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+      <div
+        className="w-full rounded-t-3xl p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+        style={{ background: 'var(--surface)' }}
+      >
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-bold text-gray-900">📦 Restock Suggestions</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
-            <X size={20} className="text-gray-500" />
+          <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>📦 Restock Suggestions</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-full transition-colors"
+            style={{ color: 'var(--muted)' }}
+          >
+            <X size={20} />
           </button>
         </div>
         {suggestions.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-6">
+          <p className="text-sm text-center py-6" style={{ color: 'var(--muted)' }}>
             No demand signals in the last 7 days.
           </p>
         ) : (
           <div className="space-y-3">
             {suggestions.map((s, i) => (
-              <div key={s.phoneType} className="bg-gray-50 rounded-xl p-4">
+              <div
+                key={s.phoneType}
+                className="rounded-xl p-4"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+              >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-gray-400 tabular-nums">{i + 1}</span>
-                  <p className="text-sm font-semibold text-gray-900">{s.phoneType}</p>
+                  <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--muted)' }}>{i + 1}</span>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.phoneType}</p>
                 </div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>
                   {s.totalSignals} requests · {s.reason}
                 </p>
-                <p className="text-xs font-semibold text-blue-600 mt-1">Suggested: {s.tier}</p>
+                <p className="text-xs font-semibold mt-1" style={{ color: 'var(--primary)' }}>Suggested: {s.tier}</p>
               </div>
             ))}
           </div>
@@ -193,14 +217,20 @@ function RestockModal({
             type="button"
             onClick={handleCopy}
             disabled={suggestions.length === 0}
-            className="flex-1 border border-gray-200 text-gray-700 rounded-xl py-3 font-semibold text-sm disabled:opacity-40 active:scale-[0.98] transition-transform"
+            className="flex-1 rounded-xl py-3 font-semibold text-sm disabled:opacity-40 active:scale-[0.98] transition-transform"
+            style={{
+              background: 'var(--surface-2)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+            }}
           >
             Copy
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-blue-600 text-white rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+            className="flex-1 rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
           >
             Close
           </button>
@@ -247,7 +277,6 @@ function ContentPlanModal({
   const seen = new Set<string>();
   const topics: Array<{ phoneType: string; price: number | null; inStock: boolean }> = [];
 
-  // Fill from top demanded phones first
   for (const pt of topPhoneTypes) {
     if (seen.has(pt.phoneType)) continue;
     seen.add(pt.phoneType);
@@ -259,7 +288,6 @@ function ContentPlanModal({
     });
   }
 
-  // Then fill from available inventory
   for (const s of availableStock) {
     if (topics.length >= 7) break;
     if (seen.has(s.phoneType)) continue;
@@ -267,7 +295,6 @@ function ContentPlanModal({
     topics.push({ phoneType: s.phoneType, price: s.price, inStock: true });
   }
 
-  // Pad remaining days with generic content topics
   while (topics.length < 7) {
     const genericTopic = GENERIC_TOPICS[topics.length % GENERIC_TOPICS.length];
     topics.push({ phoneType: genericTopic, price: null, inStock: false });
@@ -302,31 +329,43 @@ function ContentPlanModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-end"
+      className="fixed inset-0 bg-black/60 z-50 flex items-end"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white w-full rounded-t-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+      <div
+        className="w-full rounded-t-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto"
+        style={{ background: 'var(--surface)' }}
+      >
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-bold text-gray-900">📅 Content Plan (7 days)</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
-            <X size={20} className="text-gray-500" />
+          <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>📅 Content Plan (7 days)</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-full transition-colors"
+            style={{ color: 'var(--muted)' }}
+          >
+            <X size={20} />
           </button>
         </div>
         <div className="space-y-3">
           {planLines.map((p) => (
-            <div key={p.day} className="bg-gray-50 rounded-xl p-4">
-              <p className="text-xs font-bold text-blue-600 mb-2">
+            <div
+              key={p.day}
+              className="rounded-xl p-4"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+            >
+              <p className="text-xs font-bold mb-2" style={{ color: 'var(--primary)' }}>
                 Day {p.day} — {p.topic}
               </p>
-              <p className="text-xs text-gray-700">
+              <p className="text-xs" style={{ color: 'var(--text)' }}>
                 <span className="font-medium">Hook:</span> &quot;{p.hook}&quot;
               </p>
-              <p className="text-xs text-gray-700 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--text)' }}>
                 <span className="font-medium">Mention:</span> {p.mention}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
                 <span className="font-medium">CTA:</span> {p.cta}
               </p>
             </div>
@@ -336,14 +375,20 @@ function ContentPlanModal({
           <button
             type="button"
             onClick={handleCopy}
-            className="flex-1 border border-gray-200 text-gray-700 rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+            className="flex-1 rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+            style={{
+              background: 'var(--surface-2)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+            }}
           >
             Copy
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-blue-600 text-white rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+            className="flex-1 rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
           >
             Close
           </button>
@@ -369,17 +414,18 @@ function AlertItem({
       <button
         type="button"
         onClick={onClick}
-        className="flex items-start gap-3 px-4 py-3 w-full text-left active:bg-gray-50 transition-colors"
+        className="flex items-start gap-3 px-4 py-3 w-full text-left transition-colors"
+        style={{ color: 'var(--text)' }}
       >
         <span className="text-base flex-shrink-0 mt-0.5">{emoji}</span>
-        <p className="text-sm text-gray-700 leading-snug">{text}</p>
+        <p className="text-sm leading-snug" style={{ color: 'var(--text)' }}>{text}</p>
       </button>
     );
   }
   return (
     <div className="flex items-start gap-3 px-4 py-3">
       <span className="text-base flex-shrink-0 mt-0.5">{emoji}</span>
-      <p className="text-sm text-gray-700 leading-snug">{text}</p>
+      <p className="text-sm leading-snug" style={{ color: 'var(--text)' }}>{text}</p>
     </div>
   );
 }
@@ -398,7 +444,7 @@ export default function Dashboard() {
 
   if (metrics === undefined || demand === undefined) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -462,24 +508,39 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
         {/* Sticky Header */}
-        <div className="sticky top-0 z-30 bg-white px-4 pt-4 pb-4 border-b border-gray-100">
+        <div
+          className="sticky top-0 z-30 px-4 pt-4 pb-4"
+          style={{
+            background: 'var(--surface)',
+            borderBottom: '1px solid var(--border)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium">Good day,</p>
-              <h1 className="text-xl font-bold text-gray-900">{user.first_name} 👋</h1>
+              <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>Good day,</p>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{user.first_name} 👋</h1>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 aria-label="Open settings"
                 onClick={() => navigate('/settings')}
-                className="w-10 h-10 rounded-full border border-gray-100 bg-gray-50 flex items-center justify-center text-gray-600 active:scale-95 transition-transform"
+                className="w-10 h-10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--muted)',
+                }}
               >
                 <SettingsIcon size={18} />
               </button>
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
+                style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+              >
                 {user.first_name.charAt(0).toUpperCase()}
               </div>
             </div>
@@ -489,7 +550,7 @@ export default function Dashboard() {
         <div className="px-4 py-4 space-y-4">
           {/* Demand Overview */}
           <div>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--muted)' }}>
               Demand Overview
             </h2>
             <div className="space-y-3">
@@ -514,14 +575,15 @@ export default function Dashboard() {
 
           {/* Quick Actions */}
           <div>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--muted)' }}>
               Quick Actions
             </h2>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setShowRestock(true)}
-                className="bg-blue-600 text-white rounded-2xl p-4 flex items-center gap-2 active:scale-95 transition-transform shadow-sm"
+                className="rounded-2xl p-4 flex items-center gap-2 active:scale-95 transition-transform"
+                style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
               >
                 <span className="text-lg leading-none">📦</span>
                 <span className="text-sm font-semibold leading-snug">Restock Suggestions</span>
@@ -529,7 +591,12 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => setShowContentPlan(true)}
-                className="bg-white border border-gray-100 text-gray-800 rounded-2xl p-4 flex items-center gap-2 active:scale-95 transition-transform shadow-sm"
+                className="rounded-2xl p-4 flex items-center gap-2 active:scale-95 transition-transform"
+                style={{
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
+                }}
               >
                 <span className="text-lg leading-none">📅</span>
                 <span className="text-sm font-semibold leading-snug">Content Plan (7d)</span>
@@ -539,12 +606,15 @@ export default function Dashboard() {
 
           {/* Alerts */}
           <div>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--muted)' }}>
               Alerts
             </h2>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            >
               {activeAlerts.length === 0 ? (
-                <p className="text-center text-gray-500 text-sm py-8">
+                <p className="text-center text-sm py-8" style={{ color: 'var(--muted)' }}>
                   ✅ Nothing needs attention
                 </p>
               ) : (
@@ -552,10 +622,10 @@ export default function Dashboard() {
                   {visibleAlerts.map((alert, idx) => (
                     <div
                       key={idx}
-                      className={
+                      style={
                         idx < visibleAlerts.length - 1 || hasMore
-                          ? 'border-b border-gray-50'
-                          : ''
+                          ? { borderBottom: '1px solid var(--border)' }
+                          : {}
                       }
                     >
                       <AlertItem
@@ -569,7 +639,8 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={() => setShowAllAlerts(true)}
-                      className="w-full py-3 text-xs font-medium text-blue-600 text-center active:bg-gray-50 transition-colors"
+                      className="w-full py-3 text-xs font-medium text-center active:opacity-70 transition-opacity"
+                      style={{ color: 'var(--primary)' }}
                     >
                       Show {activeAlerts.length - PREVIEW} more
                     </button>

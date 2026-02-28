@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 /**
  * One-time backfill: for each thread missing firstMessageAt,
@@ -25,5 +25,36 @@ export const backfillFirstMessageAt = mutation({
       }
     }
     return { updated, total: threads.length };
+  },
+});
+
+/**
+ * Badge count: number of threads with status "new"
+ * (customer messaged, admin hasn't replied/seen yet).
+ * Used by the BottomNav Inbox badge.
+ */
+export const getInboxBadgeCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("threads")
+      .withIndex("by_status", (q) => q.eq("status", "new"))
+      .collect();
+    return rows.length;
+  },
+});
+
+/**
+ * Badge count: number of exchanges with status "Pending".
+ * Used by the BottomNav Exchange badge.
+ */
+export const getExchangeBadgeCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("exchanges")
+      .withIndex("by_status", (q) => q.eq("status", "Pending"))
+      .collect();
+    return rows.length;
   },
 });

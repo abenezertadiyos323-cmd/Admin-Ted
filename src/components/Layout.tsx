@@ -4,7 +4,7 @@ import FloatingActionButton from './FloatingActionButton';
 
 export default function Layout() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-bg">
       {/* Main content area — bottom padding accounts for nav bar + device safe area */}
       <main
         className="flex-1 overflow-y-auto"
