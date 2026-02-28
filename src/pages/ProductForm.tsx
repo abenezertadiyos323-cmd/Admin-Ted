@@ -266,7 +266,7 @@ export default function ProductForm() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-bg">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -274,12 +274,12 @@ export default function ProductForm() {
 
   if (isEdit && existingProduct === null) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-3 px-6 text-center">
-        <p className="text-gray-700 font-semibold">Product not found</p>
-        <p className="text-gray-400 text-sm">This product may have been deleted.</p>
+      <div className="flex flex-col items-center justify-center h-screen bg-bg gap-3 px-6 text-center">
+        <p className="text-app-text font-semibold">Product not found</p>
+        <p className="text-muted text-sm">This product may have been deleted.</p>
         <button
           onClick={() => navigate(getInventoryPath())}
-          className="mt-2 text-blue-600 text-sm font-semibold active:scale-95 transition-transform"
+          className="mt-2 text-primary text-sm font-semibold active:scale-95 transition-transform"
         >
           ← Back to Inventory
         </button>
@@ -293,7 +293,7 @@ export default function ProductForm() {
   const debugHostname = debugBackendInfo.hostname ?? debugBackendInfo.label ?? 'unset';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       <PageHeader
         title={isEdit ? 'Edit Product' : `Add ${defaultType === 'phone' ? 'Phone' : 'Accessory'}`}
         showBack
@@ -302,7 +302,7 @@ export default function ProductForm() {
         <div className="px-4 py-4 space-y-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
           {/* Image Upload — backed by Convex Storage */}
           <div className="card-interactive p-4 cursor-default">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Photos (up to 3)</p>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Photos (up to 3)</p>
 
             {/* Hidden native file picker — opened programmatically per slot */}
             <input
@@ -323,28 +323,28 @@ export default function ProductForm() {
                     key={n}
                     type="button"
                     onClick={() => handleSlotPress(n)}
-                    className="w-20 h-20 rounded-xl border-2 border-dashed border-black/10 flex items-center justify-center bg-slate-50 overflow-hidden relative active:scale-95 transition-transform"
+                    className="w-20 h-20 rounded-xl border-2 border-dashed flex items-center justify-center bg-surface-2 overflow-hidden relative active:scale-95 transition-transform border-[var(--border)]"
                   >
                     {displayUrl ? (
                       <img src={displayUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <Camera size={20} className="text-gray-300" />
+                      <Camera size={20} className="text-muted" />
                     )}
                   </button>
                 );
               })}
             </div>
-            <p className="text-[11px] text-gray-400 mt-2">Tap a slot to pick an image (max 3)</p>
+            <p className="text-[11px] text-muted mt-2">Tap a slot to pick an image (max 3)</p>
           </div>
 
           {/* Basic Info */}
           <div className="card-interactive p-4 space-y-4 cursor-default">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Basic Info</p>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">Basic Info</p>
 
             {/* Type (new products only) */}
             {!isEdit && (
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Type</label>
+                <label className="text-xs font-medium text-app-text mb-1.5 block">Type</label>
                 <div className="flex gap-2">
                   {(['phone', 'accessory'] as ProductType[]).map((t) => (
                     <button
@@ -352,7 +352,7 @@ export default function ProductForm() {
                       onClick={() => update('type', t)}
                       className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${form.type === t
                         ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600'
+                        : 'bg-surface-2 text-muted'
                         }`}
                     >
                       {t}
@@ -364,7 +364,7 @@ export default function ProductForm() {
 
             {/* Phone Type / Accessory Name */}
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1.5 block">
+              <label className="text-xs font-medium text-app-text mb-1.5 block">
                 {isPhone ? 'Phone Type *' : 'Accessory Name *'}
               </label>
               <input
@@ -372,7 +372,7 @@ export default function ProductForm() {
                 value={form.phoneType}
                 onChange={(e) => update('phoneType', e.target.value)}
                 placeholder={isPhone ? 'e.g. iPhone 13 Pro Max' : 'e.g. AirPods Pro 2nd Gen'}
-                className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.phoneType ? 'border-red-400 bg-red-50' : 'border-black/5'
+                className={`w-full bg-surface-2 border rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.phoneType ? 'border-red-400 bg-red-950/40' : 'border-[var(--border)]'
                   }`}
               />
               {errors.phoneType && <p className="text-xs text-red-500 mt-1">{errors.phoneType}</p>}
@@ -383,23 +383,23 @@ export default function ProductForm() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">RAM</label>
+                    <label className="text-xs font-medium text-app-text mb-1.5 block">RAM</label>
                     <input
                       type="text"
                       value={form.ram}
                       onChange={(e) => update('ram', e.target.value)}
                       placeholder="e.g. 8GB"
-                      className="w-full bg-slate-50 border border-black/5 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                      className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">Storage *</label>
+                    <label className="text-xs font-medium text-app-text mb-1.5 block">Storage *</label>
                     <input
                       type="text"
                       value={form.storage}
                       onChange={(e) => update('storage', e.target.value)}
                       placeholder="e.g. 256GB"
-                      className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.storage ? 'border-red-400 bg-red-50' : 'border-black/5'
+                      className={`w-full bg-surface-2 border rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.storage ? 'border-red-400 bg-red-950/40' : 'border-[var(--border)]'
                         }`}
                     />
                     {errors.storage && <p className="text-xs text-red-500 mt-1">{errors.storage}</p>}
@@ -408,19 +408,19 @@ export default function ProductForm() {
 
                 {/* Condition */}
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1.5 block">Condition *</label>
+                  <label className="text-xs font-medium text-app-text mb-1.5 block">Condition *</label>
                   <div className="grid grid-cols-2 gap-2">
                     {CONDITIONS.map((c) => (
                       <button
                         key={c}
                         onClick={() => update('condition', c)}
                         className={`p-2.5 rounded-xl border text-left transition-all ${form.condition === c
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-black/5 bg-slate-50'
+                          ? 'border-indigo-500 bg-indigo-950/60'
+                          : 'border-[var(--border)] bg-surface-2'
                           }`}
                       >
-                        <p className={`text-xs font-semibold ${form.condition === c ? 'text-indigo-700' : 'text-gray-700'}`}>{c}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{CONDITION_DESCRIPTIONS[c]}</p>
+                        <p className={`text-xs font-semibold ${form.condition === c ? 'text-indigo-400' : 'text-app-text'}`}>{c}</p>
+                        <p className="text-[10px] text-muted mt-0.5">{CONDITION_DESCRIPTIONS[c]}</p>
                       </button>
                     ))}
                   </div>
@@ -432,34 +432,34 @@ export default function ProductForm() {
 
           {/* Pricing & Stock */}
           <div className="card-interactive p-4 space-y-4 cursor-default">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pricing & Stock</p>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">Pricing & Stock</p>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Price (ETB) *</label>
+                <label className="text-xs font-medium text-app-text mb-1.5 block">Price (ETB) *</label>
                 <input
                   type="text"
                   value={priceText}
                   onChange={(e) => handlePriceChange(e.target.value)}
                   placeholder="e.g. 85000"
                   inputMode="numeric"
-                  className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.price ? 'border-red-400 bg-red-50' : 'border-black/5'
+                  className={`w-full bg-surface-2 border rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.price ? 'border-red-400 bg-red-950/40' : 'border-[var(--border)]'
                     }`}
                 />
                 {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
                 {form.price !== null && form.price > 0 && (
-                  <p className="text-[11px] text-blue-600 mt-1">{formatETB(form.price)}</p>
+                  <p className="text-[11px] text-blue-400 mt-1">{formatETB(form.price)}</p>
                 )}
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Stock Qty *</label>
+                <label className="text-xs font-medium text-app-text mb-1.5 block">Stock Qty *</label>
                 <input
                   type="number"
                   value={form.stockQuantity}
                   onChange={(e) => update('stockQuantity', e.target.value)}
                   placeholder="e.g. 3"
                   min="0"
-                  className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.stockQuantity ? 'border-red-400 bg-red-50' : 'border-black/5'
+                  className={`w-full bg-surface-2 border rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${errors.stockQuantity ? 'border-red-400 bg-red-950/40' : 'border-[var(--border)]'
                     }`}
                 />
                 {form.stockQuantity !== '' && (
@@ -473,14 +473,14 @@ export default function ProductForm() {
             {/* Exchange Available — segmented pill toggle */}
             {isPhone && (
               <div>
-                <p className="text-sm font-semibold text-gray-800 mb-2">Exchange Available</p>
-                <div className="flex rounded-xl border border-black/5 bg-slate-100 p-1 gap-1">
+                <p className="text-sm font-semibold text-app-text mb-2">Exchange Available</p>
+                <div className="flex rounded-xl border border-[var(--border)] bg-surface-2 p-1 gap-1">
                   <button
                     type="button"
                     onClick={() => update('exchangeEnabled', false)}
                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${!form.exchangeEnabled
                       ? 'bg-red-500 text-white shadow-sm'
-                      : 'text-gray-400'
+                      : 'text-muted'
                       }`}
                   >
                     Exchange OFF
@@ -490,13 +490,13 @@ export default function ProductForm() {
                     onClick={() => update('exchangeEnabled', true)}
                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.exchangeEnabled
                       ? 'bg-green-500 text-white shadow-sm'
-                      : 'text-gray-400'
+                      : 'text-muted'
                       }`}
                   >
                     Exchange ON
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1.5 px-0.5">
+                <p className="text-[11px] text-muted mt-1.5 px-0.5">
                   {form.exchangeEnabled
                     ? '✓ Customers can submit trade-in requests for this phone'
                     : 'This phone is not available for exchange or trade-in'}
@@ -507,7 +507,7 @@ export default function ProductForm() {
 
           {/* Description */}
           <div className="card-interactive p-4 cursor-default">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 block">
+            <label className="text-xs font-semibold text-muted uppercase tracking-wide mb-3 block">
               Description
             </label>
             <textarea
@@ -515,13 +515,13 @@ export default function ProductForm() {
               onChange={(e) => update('description', e.target.value)}
               placeholder="Short summary about the product (color, accessories included, etc.)"
               rows={3}
-              className="w-full bg-slate-50 border border-black/5 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors resize-none"
+              className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors resize-none"
             />
           </div>
 
           {/* Save error banner */}
           {saveError && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 font-medium">
+            <div className="bg-red-950/50 border border-red-500/40 rounded-xl px-4 py-3 text-sm text-red-400 font-medium">
               {saveError}
             </div>
           )}
@@ -538,7 +538,7 @@ export default function ProductForm() {
 
           {/* DEBUG — visible in Telegram to confirm which Convex deployment is active */}
           {import.meta.env.DEV && (
-            <p className="text-center text-[10px] text-gray-400 font-mono">
+            <p className="text-center text-[10px] text-muted font-mono">
               Convex: {debugHostname}
             </p>
           )}
@@ -546,12 +546,12 @@ export default function ProductForm() {
           {/* Archive / Restore (Edit only) */}
           {isEdit && existingProduct && (
             <div className="card-interactive p-4 cursor-default mt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Danger Zone</p>
+              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Danger Zone</p>
               {existingProduct.archivedAt ? (
                 <button
                   onClick={handleRestore}
                   disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-green-500 text-green-600 font-semibold text-sm btn-interactive disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-green-500 text-green-400 font-semibold text-sm btn-interactive disabled:opacity-50"
                 >
                   <RotateCcw size={16} />
                   Restore Product
@@ -560,13 +560,13 @@ export default function ProductForm() {
                 <button
                   onClick={handleArchive}
                   disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-red-300 text-red-500 font-semibold text-sm btn-interactive disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-red-500/60 text-red-400 font-semibold text-sm btn-interactive disabled:opacity-50"
                 >
                   <Archive size={16} />
                   Archive Product
                 </button>
               )}
-              <p className="text-[11px] text-gray-400 mt-2 text-center">
+              <p className="text-[11px] text-muted mt-2 text-center">
                 {existingProduct.archivedAt
                   ? 'Restore to make product visible again'
                   : 'Archived products are hidden from customers. Auto-deleted after 30 days.'}

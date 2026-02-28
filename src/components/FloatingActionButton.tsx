@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Smartphone, Headphones } from 'lucide-react';
 import { hapticLight } from '../lib/telegram';
+
+const TAB_ROUTES = ['/', '/inventory', '/exchanges', '/inbox'];
 
 export default function FloatingActionButton() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  if (!TAB_ROUTES.includes(pathname)) return null;
 
   const handleToggle = () => {
     hapticLight();
