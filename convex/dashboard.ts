@@ -320,13 +320,13 @@ export const getDemandMetrics = query({
       .withIndex("by_isArchived_createdAt", (q) => q.eq("isArchived", false))
       .collect();
 
+    // Keys are lowercased so they match normalized demand_events phoneType values.
+    // Products store "iPhone 13"; demand events store "iphone 13" after normalization.
     const stockByPhoneType = new Map<string, number>();
     for (const p of activeProducts) {
       if (!p.phoneType) continue;
-      stockByPhoneType.set(
-        p.phoneType,
-        (stockByPhoneType.get(p.phoneType) ?? 0) + p.stockQuantity
-      );
+      const key = p.phoneType.toLowerCase();
+      stockByPhoneType.set(key, (stockByPhoneType.get(key) ?? 0) + p.stockQuantity);
     }
 
     // Requested but not available: demanded phone types with 0 active in-stock units
