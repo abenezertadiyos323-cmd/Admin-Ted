@@ -9,24 +9,24 @@ export default function SettingsBackend() {
   const isDev = backendInfo.environment === 'DEV';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       <PageHeader title="Backend Status" subtitle={backendInfo.status} showBack backTo="/settings" />
 
       <div className="px-4 py-4">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+        <div className="bg-surface rounded-2xl border border-[var(--border)] shadow-sm p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Environment</p>
-              <p className="text-sm font-medium text-gray-800 mt-1">{backendInfo.environment}</p>
+              <p className="text-xs text-muted uppercase tracking-wider">Environment</p>
+              <p className="text-sm font-medium text-app-text mt-1">{backendInfo.environment}</p>
             </div>
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Hostname</p>
-            <p className="text-sm font-medium text-gray-800 mt-1">{backendLabel}</p>
+            <p className="text-xs text-muted uppercase tracking-wider">Hostname</p>
+            <p className="text-sm font-medium text-app-text mt-1">{backendLabel}</p>
           </div>
           {isDev && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-2">
-              <p className="text-xs text-yellow-800">⚠ DEV backend — do not run PROD migrations.</p>
+            <div className="bg-yellow-950/40 border border-yellow-500/40 rounded-lg p-3 mt-2">
+              <p className="text-xs text-yellow-400">⚠ DEV backend — do not run PROD migrations.</p>
             </div>
           )}
         </div>

@@ -54,9 +54,9 @@ export function getStockStatus(qty: number): {
   color: string;
   bg: string;
 } {
-  if (qty === 0) return { label: 'Out of Stock', color: 'text-red-600', bg: 'bg-red-50' };
-  if (qty <= 2) return { label: 'Low Stock', color: 'text-amber-600', bg: 'bg-amber-50' };
-  return { label: 'In Stock', color: 'text-green-600', bg: 'bg-green-50' };
+  if (qty === 0) return { label: 'Out of Stock', color: 'text-red-400', bg: 'bg-red-950/40' };
+  if (qty <= 2) return { label: 'Low Stock', color: 'text-amber-400', bg: 'bg-amber-950/40' };
+  return { label: 'In Stock', color: 'text-green-400', bg: 'bg-green-950/40' };
 }
 
 /**
@@ -67,12 +67,12 @@ export function getExchangeStatusColor(status: string): {
   bg: string;
 } {
   switch (status) {
-    case 'Pending': return { color: 'text-blue-700', bg: 'bg-blue-50' };
-    case 'Quoted': return { color: 'text-purple-700', bg: 'bg-purple-50' };
-    case 'Accepted': return { color: 'text-amber-700', bg: 'bg-amber-50' };
-    case 'Completed': return { color: 'text-green-700', bg: 'bg-green-50' };
-    case 'Rejected': return { color: 'text-red-700', bg: 'bg-red-50' };
-    default: return { color: 'text-gray-700', bg: 'bg-gray-50' };
+    case 'Pending': return { color: 'text-blue-400', bg: 'bg-blue-950/40' };
+    case 'Quoted': return { color: 'text-purple-400', bg: 'bg-purple-950/40' };
+    case 'Accepted': return { color: 'text-amber-400', bg: 'bg-amber-950/40' };
+    case 'Completed': return { color: 'text-green-400', bg: 'bg-green-950/40' };
+    case 'Rejected': return { color: 'text-red-400', bg: 'bg-red-950/40' };
+    default: return { color: 'text-muted', bg: 'bg-surface-2' };
   }
 }
 
@@ -85,10 +85,10 @@ export function getCategoryColor(category: string): {
   border: string;
 } {
   switch (category) {
-    case 'hot': return { color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' };
-    case 'warm': return { color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' };
-    case 'cold': return { color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200' };
-    default: return { color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200' };
+    case 'hot': return { color: 'text-rose-400', bg: 'bg-rose-950/40', border: 'border-rose-500/40' };
+    case 'warm': return { color: 'text-amber-400', bg: 'bg-amber-950/40', border: 'border-amber-500/40' };
+    case 'cold': return { color: 'text-muted', bg: 'bg-surface-2', border: 'border-[var(--border)]' };
+    default: return { color: 'text-muted', bg: 'bg-surface-2', border: 'border-[var(--border)]' };
   }
 }
 

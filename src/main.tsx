@@ -14,10 +14,10 @@ createRoot(document.getElementById('root')!).render(
     <ConvexProvider client={convex}>
       <ErrorBoundary
         fallbackRender={() => (
-          <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-            <div className="w-full max-w-sm bg-white border border-gray-100 rounded-2xl p-5 text-center shadow-sm">
-              <h1 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h1>
-              <p className="text-sm text-gray-600 mb-4">
+          <div className="min-h-screen bg-bg flex items-center justify-center p-6">
+            <div className="w-full max-w-sm bg-surface border border-[var(--border)] rounded-2xl p-5 text-center shadow-sm">
+              <h1 className="text-lg font-semibold text-app-text mb-2">Something went wrong</h1>
+              <p className="text-sm text-muted mb-4">
                 Please refresh. If it keeps happening, contact support.
               </p>
               <button
