@@ -1,5 +1,7 @@
 import type { Thread } from '../types';
 import { formatRelativeTime, getCustomerName, truncate } from '../lib/utils';
+import { Badge } from './Badge';
+import { useBadgePop } from '../hooks/useBadgePop';
 
 interface ThreadCardProps {
   thread: Thread;
@@ -28,11 +30,8 @@ export default function ThreadCard({ thread, onClick }: ThreadCardProps) {
 
   const avatarBg = AVATAR_COLORS[fullName.charCodeAt(0) % AVATAR_COLORS.length];
 
-  // Unread count label
-  const unreadLabel =
-    thread.unreadCount >= 100 ? '99+' :
-    thread.unreadCount > 9    ? `${thread.unreadCount}` :
-                                 String(thread.unreadCount);
+  // Pop animation — fires when unreadCount increases for this specific thread
+  const { shouldPop } = useBadgePop(thread.unreadCount);
 
   return (
     <button
@@ -81,22 +80,13 @@ export default function ThreadCard({ thread, onClick }: ThreadCardProps) {
               : 'No messages yet'}
           </p>
 
-          {/* Instagram-style unread badge */}
+          {/* Unread badge with pop animation */}
           {isUnread && (
-            <span
-              className="ml-2 flex-shrink-0 flex items-center justify-center font-semibold text-[10px] text-white rounded-full"
-              style={{
-                background: 'var(--badge)',
-                border: '1.5px solid var(--bg)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
-                minWidth: thread.unreadCount > 9 ? 'auto' : '18px',
-                height: '18px',
-                padding: thread.unreadCount > 9 ? '0 5px' : '0',
-                lineHeight: 1,
-              }}
-            >
-              {unreadLabel}
-            </span>
+            <Badge
+              count={thread.unreadCount}
+              pop={shouldPop}
+              className="ml-2 flex-shrink-0"
+            />
           )}
         </div>
       </div>

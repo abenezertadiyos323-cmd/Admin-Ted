@@ -74,3 +74,20 @@ body {
 /* Safe-area helpers — used by PageHeader and full-screen pages */
 .pt-safe-top  { padding-top:    env(safe-area-inset-top,    0px); }
 .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ── Badge pop animation ──────────────────────────────────────────────────
+   Quick scale-up + slight overshoot-back so the badge "pops" when a new
+   notification arrives.  Duration matches useBadgePop's POP_MS (220ms).
+   will-change: transform  keeps the animation on the GPU / compositor.
+──────────────────────────────────────────────────────────────────────── */
+@keyframes badge-pop {
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.25); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1);    }
+}
+
+.animate-badge-pop {
+  animation: badge-pop 220ms ease-out;
+  will-change: transform;
+}

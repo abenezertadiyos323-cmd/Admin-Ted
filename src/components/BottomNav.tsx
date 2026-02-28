@@ -2,45 +2,22 @@ import { NavLink } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Home, Package, ArrowLeftRight, MessageCircle } from 'lucide-react';
-
-// ── Instagram-style notification badge ────────────────────────────────────
-function NavBadge({ count }: { count: number | undefined }) {
-  if (!count || count === 0) return null;
-  const label = count >= 100 ? '99+' : String(count);
-  return (
-    <span
-      style={{
-        position: 'absolute',
-        top: '-3px',
-        right: count >= 10 ? '-7px' : '-5px',
-        background: 'var(--badge)',
-        color: '#fff',
-        fontSize: '9px',
-        fontWeight: 700,
-        lineHeight: 1,
-        borderRadius: '999px',
-        padding: count >= 10 ? '2px 4px' : '2.5px 5px',
-        minWidth: '15px',
-        textAlign: 'center',
-        border: '1.5px solid var(--bg)',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
-        pointerEvents: 'none',
-      }}
-    >
-      {label}
-    </span>
-  );
-}
+import { Badge } from './Badge';
+import { useBadgePop } from '../hooks/useBadgePop';
 
 export default function BottomNav() {
   const inboxCount    = useQuery(api.threads.getInboxBadgeCount);
   const exchangeCount = useQuery(api.threads.getExchangeBadgeCount);
 
+  // Pop hooks — one per badge, called unconditionally at the top level
+  const { shouldPop: inboxPop }    = useBadgePop(inboxCount);
+  const { shouldPop: exchangePop } = useBadgePop(exchangeCount);
+
   const navItems = [
-    { to: '/',          label: 'Home',     icon: Home,           badge: undefined },
-    { to: '/inventory', label: 'Inventory', icon: Package,        badge: undefined },
-    { to: '/exchanges', label: 'Exchange',  icon: ArrowLeftRight, badge: exchangeCount },
-    { to: '/inbox',     label: 'Inbox',    icon: MessageCircle,  badge: inboxCount },
+    { to: '/',          label: 'Home',     icon: Home,           badge: undefined,     pop: false },
+    { to: '/inventory', label: 'Inventory', icon: Package,        badge: undefined,     pop: false },
+    { to: '/exchanges', label: 'Exchange',  icon: ArrowLeftRight, badge: exchangeCount, pop: exchangePop },
+    { to: '/inbox',     label: 'Inbox',    icon: MessageCircle,  badge: inboxCount,    pop: inboxPop },
   ];
 
   return (
@@ -53,7 +30,7 @@ export default function BottomNav() {
       }}
     >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-        {navItems.map(({ to, label, icon: Icon, badge }) => (
+        {navItems.map(({ to, label, icon: Icon, badge, pop }) => (
           <NavLink
             key={to}
             to={to}
@@ -69,14 +46,29 @@ export default function BottomNav() {
           >
             {({ isActive }) => (
               <>
-                {/* Icon wrapper — positions badge relative to icon */}
+                {/* Icon wrapper — badge positioned top-right of icon */}
                 <span style={{ position: 'relative', display: 'inline-flex' }}>
                   <Icon
                     size={22}
                     strokeWidth={isActive ? 2.5 : 1.8}
                     className="transition-transform active:scale-90"
                   />
-                  <NavBadge count={badge} />
+                  {badge !== undefined && badge > 0 && (
+                    <Badge
+                      count={badge}
+                      pop={pop}
+                      style={{
+                        position:  'absolute',
+                        top:       '-3px',
+                        right:     badge >= 10 ? '-7px' : '-5px',
+                        fontSize:  '9px',
+                        height:    '15px',
+                        minWidth:  badge >= 10 ? 'auto' : '15px',
+                        padding:   badge >= 10 ? '0 4px' : '0',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )}
                 </span>
                 <span
                   className="text-[10px] font-medium"
