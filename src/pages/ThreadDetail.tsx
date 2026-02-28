@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Send, ArrowLeftRight, ChevronLeft } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { getThreadById, getMessages, sendMessage, getExchanges, markThreadSeen } from '../lib/api';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { getTelegramUser } from '../lib/telegram';
 import { formatTime, formatDate, getCustomerName, formatETB } from '../lib/utils';
-import type { Thread, Message, Exchange } from '../types';
+import type { Message, Exchange } from '../types';
 
 // Avatar palette — same as ThreadCard for consistency
 const AVATAR_COLORS = [
@@ -39,31 +41,25 @@ function getThreadStatusDark(status: string): { background: string; color: strin
 export default function ThreadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [thread, setThread] = useState<Thread | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [exchanges, setExchanges] = useState<Exchange[]>([]);
-  const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const user = getTelegramUser();
 
+  const thread = useQuery(api.threads.getThread, id ? { threadId: id as Id<'threads'> } : 'skip');
+  const messages = useQuery(api.threads.listThreadMessages, id ? { threadId: id as Id<'threads'> } : 'skip') ?? [];
+  const exchanges = (useQuery(api.exchanges.listExchangesByThread, id ? { threadId: id as Id<'threads'> } : 'skip') ?? []) as Exchange[];
+
+  const createAdminMessage = useMutation(api.messages.createAdminMessage);
+  const markSeenMutation = useMutation(api.threads.markThreadSeen);
+
+  const markedSeen = useRef(false);
   useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      getThreadById(id),
-      getMessages(id),
-      getExchanges(),
-    ]).then(([t, m, ex]) => {
-      setThread(t);
-      setMessages(m);
-      setExchanges(ex.filter((e) => e.threadId === id));
-      setLoading(false);
-      if (t && t.status === 'new') {
-        markThreadSeen(id);
-      }
-    });
-  }, [id]);
+    if (!markedSeen.current && thread && thread.status === 'new') {
+      markedSeen.current = true;
+      markSeenMutation({ threadId: thread._id });
+    }
+  }, [thread]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,8 +68,11 @@ export default function ThreadDetail() {
   const handleSend = async () => {
     if (!text.trim() || !id || sending) return;
     setSending(true);
-    const msg = await sendMessage(id, text.trim(), String(user.id));
-    setMessages((prev) => [...prev, msg]);
+    await createAdminMessage({
+      threadId: id as Id<'threads'>,
+      adminTelegramId: String(user.id),
+      text: text.trim(),
+    });
     setText('');
     setSending(false);
   };
@@ -85,7 +84,7 @@ export default function ThreadDetail() {
     }
   };
 
-  if (loading) {
+  if (thread === undefined) {
     return (
       <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
         <LoadingSpinner size="lg" />

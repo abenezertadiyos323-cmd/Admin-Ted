@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeftRight } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import TabBar from '../components/TabBar';
 import ExchangeCard from '../components/ExchangeCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
-import { getExchanges } from '../lib/api';
+import { classifyCategory } from '../lib/utils';
 import type { Exchange, ThreadCategory } from '../types';
 
 const TABS: { key: ThreadCategory; label: string; emoji: string }[] = [
@@ -29,27 +31,35 @@ export default function Exchanges() {
   };
   const filterLabel = filterParam ? (FILTER_LABELS[filterParam] ?? filterParam) : null;
   const [activeTab, setActiveTab] = useState<ThreadCategory>('hot');
-  const [exchanges, setExchanges] = useState<Exchange[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [counts, setCounts] = useState<Record<ThreadCategory, number>>({ hot: 0, warm: 0, cold: 0 });
+  const rawExchanges = useQuery(api.exchanges.listExchanges, {});
 
-  useEffect(() => {
-    Promise.all([
-      getExchanges({ category: 'hot' }),
-      getExchanges({ category: 'warm' }),
-      getExchanges({ category: 'cold' }),
-    ]).then(([hot, warm, cold]) => {
-      setCounts({ hot: hot.length, warm: warm.length, cold: cold.length });
-    });
-  }, []);
+  const exchangesWithCategory = useMemo(() => {
+    if (!rawExchanges) return [] as Exchange[];
+    return rawExchanges.map((ex) => ({
+      ...ex,
+      category: classifyCategory({
+        createdAt: ex.createdAt,
+        lastCustomerMessageAt: (ex.thread as any)?.lastCustomerMessageAt,
+        lastCustomerMessageHasBudgetKeyword: ex.budgetMentionedInSubmission,
+        priorityValueETB: ex.priorityValueETB,
+        clickedContinue: ex.clickedContinue,
+        hasCustomerMessaged: (ex.thread as any)?.hasCustomerMessaged,
+        hasAdminReplied: (ex.thread as any)?.hasAdminReplied,
+      }),
+    })) as Exchange[];
+  }, [rawExchanges]);
 
-  useEffect(() => {
-    setLoading(true);
-    getExchanges({ category: activeTab }).then((data) => {
-      setExchanges(data);
-      setLoading(false);
-    });
-  }, [activeTab]);
+  const loading = rawExchanges === undefined;
+
+  const counts = useMemo(() => ({
+    hot: exchangesWithCategory.filter((e) => e.category === 'hot').length,
+    warm: exchangesWithCategory.filter((e) => e.category === 'warm').length,
+    cold: exchangesWithCategory.filter((e) => e.category === 'cold').length,
+  }), [exchangesWithCategory]);
+
+  const exchanges = useMemo(() =>
+    exchangesWithCategory.filter((e) => e.category === activeTab),
+  [exchangesWithCategory, activeTab]);
 
   const tabs = TABS.map((t) => ({
     ...t,
@@ -84,7 +94,6 @@ export default function Exchanges() {
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={(key) => {
-            setLoading(true);
             setActiveTab(key as ThreadCategory);
           }}
         />

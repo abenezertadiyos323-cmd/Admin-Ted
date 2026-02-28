@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
 
 /**
  * One-time backfill: for each thread missing firstMessageAt,
@@ -56,5 +57,62 @@ export const getExchangeBadgeCount = query({
       .withIndex("by_status", (q) => q.eq("status", "Pending"))
       .collect();
     return rows.length;
+  },
+});
+
+/**
+ * List all non-done threads sorted by lastMessageAt descending.
+ * Category (hot/warm/cold) is computed client-side from the returned fields.
+ */
+export const listThreads = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db
+      .query("threads")
+      .withIndex("by_lastMessageAt")
+      .order("desc")
+      .collect();
+    return all.filter((t) => t.status !== "done");
+  },
+});
+
+/**
+ * Get a single thread by ID. Returns null if not found.
+ */
+export const getThread = query({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.threadId);
+  },
+});
+
+/**
+ * List all messages for a thread sorted ascending by createdAt.
+ */
+export const listThreadMessages = query({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_threadId_and_createdAt", (q) =>
+        q.eq("threadId", args.threadId)
+      )
+      .order("asc")
+      .collect();
+  },
+});
+
+/**
+ * Mark a thread as seen and clear unreadCount.
+ * Called by ThreadDetail when an admin opens a new thread.
+ */
+export const markThreadSeen = mutation({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.threadId, {
+      status: "seen",
+      unreadCount: 0,
+      updatedAt: Date.now(),
+    });
   },
 });

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Send, CheckCircle, MessageCircle, ArrowRight } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { getExchangeById, updateExchangeStatus, sendQuote } from '../lib/api';
 import { getTelegramUser } from '../lib/telegram';
 import {
   formatETB,
@@ -31,53 +33,60 @@ const cardStyle = {
 export default function ExchangeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [exchange, setExchange] = useState<Exchange | null>(null);
-  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [quoteText, setQuoteText] = useState('');
   const user = getTelegramUser();
 
+  const exchange = useQuery(
+    api.exchanges.getExchange,
+    id ? { exchangeId: id as Id<'exchanges'> } : 'skip'
+  ) as Exchange | undefined | null;
+
+  const updateStatusMutation = useMutation(api.exchanges.updateExchangeStatus);
+  const sendQuoteMutation = useMutation(api.exchanges.sendQuote);
+
+  const quoteInitialized = useRef(false);
   useEffect(() => {
-    if (!id) return;
-    getExchangeById(id).then((ex) => {
-      setExchange(ex);
-      if (ex) {
-        setQuoteText(
-          buildQuoteMessage({
-            tradeInModel: `${ex.tradeInBrand} ${ex.tradeInModel}`,
-            tradeInValue: ex.finalTradeInValue,
-            desiredPhoneModel: ex.desiredPhone
-              ? ex.desiredPhone.phoneType
-              : 'Desired Phone',
-            desiredPhonePrice: ex.desiredPhonePrice,
-            difference: ex.finalDifference,
-          })
-        );
-      }
-      setLoading(false);
-    });
-  }, [id]);
+    if (exchange && !quoteInitialized.current) {
+      quoteInitialized.current = true;
+      setQuoteText(
+        buildQuoteMessage({
+          tradeInModel: `${exchange.tradeInBrand} ${exchange.tradeInModel}`,
+          tradeInValue: exchange.finalTradeInValue,
+          desiredPhoneModel: exchange.desiredPhone?.phoneType ?? 'Desired Phone',
+          desiredPhonePrice: exchange.desiredPhonePrice,
+          difference: exchange.finalDifference,
+        })
+      );
+    }
+  }, [exchange]);
 
   const handleAction = async (action: 'accept' | 'complete' | 'reject') => {
     if (!id || !exchange) return;
     setActionLoading(true);
     const statusMap = { accept: 'Accepted', complete: 'Completed', reject: 'Rejected' } as const;
-    const updated = await updateExchangeStatus(id, statusMap[action], String(user.id));
-    setExchange(updated);
+    await updateStatusMutation({
+      exchangeId: id as Id<'exchanges'>,
+      status: statusMap[action],
+      adminTelegramId: String(user.id),
+    });
     setActionLoading(false);
   };
 
   const handleSendQuote = async () => {
     if (!id || !quoteText.trim()) return;
     setActionLoading(true);
-    const { exchange: updated } = await sendQuote(id, quoteText, String(user.id));
-    setExchange(updated);
+    await sendQuoteMutation({
+      exchangeId: id as Id<'exchanges'>,
+      quoteText,
+      adminTelegramId: String(user.id),
+    });
     setShowQuoteModal(false);
     setActionLoading(false);
   };
 
-  if (loading) {
+  if (exchange === undefined) {
     return (
       <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
         <LoadingSpinner size="lg" />

@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import TabBar from '../components/TabBar';
 import ThreadCard from '../components/ThreadCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
-import { getThreads } from '../lib/api';
+import { classifyCategory } from '../lib/utils';
 import type { Thread, ThreadCategory } from '../types';
 
 const TABS: { key: ThreadCategory | 'all'; label: string; emoji: string }[] = [
@@ -35,9 +37,6 @@ export default function Inbox() {
   const filterLabel = filterParam ? (FILTER_LABELS[filterParam] ?? filterParam) : null;
 
   const [activeTab, setActiveTab] = useState<ThreadCategory | 'all'>('hot');
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [counts, setCounts] = useState<Record<string, number>>({ hot: 0, warm: 0, cold: 0 });
 
   const didApplyFilter = useRef(false);
   useEffect(() => {
@@ -47,30 +46,39 @@ export default function Inbox() {
     }
   }, [filterParam]);
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      getThreads('hot'),
-      getThreads('warm'),
-      getThreads('cold'),
-    ]).then(([hot, warm, cold]) => {
-      setCounts({ hot: hot.length, warm: warm.length, cold: cold.length });
-      setLoading(false);
-    });
-  }, []);
+  const rawThreads = useQuery(api.threads.listThreads, {});
 
-  useEffect(() => {
-    setLoading(true);
-    const category = activeTab === 'all' ? undefined : activeTab;
-    getThreads(category).then((data) => {
-      setThreads(data);
-      setLoading(false);
-    });
-  }, [activeTab]);
+  const threadsWithCategory = useMemo(() => {
+    if (!rawThreads) return [] as Thread[];
+    return rawThreads.map((t) => ({
+      ...t,
+      category: classifyCategory({
+        createdAt: t.createdAt,
+        lastCustomerMessageAt: t.lastCustomerMessageAt,
+        lastCustomerMessageHasBudgetKeyword: t.lastCustomerMessageHasBudgetKeyword,
+        hasCustomerMessaged: t.hasCustomerMessaged,
+        hasAdminReplied: t.hasAdminReplied,
+      }),
+    })) as Thread[];
+  }, [rawThreads]);
+
+  const loading = rawThreads === undefined;
+
+  const counts = useMemo(() => ({
+    hot: threadsWithCategory.filter((t) => t.category === 'hot').length,
+    warm: threadsWithCategory.filter((t) => t.category === 'warm').length,
+    cold: threadsWithCategory.filter((t) => t.category === 'cold').length,
+  }), [threadsWithCategory]);
+
+  const threads = useMemo(() =>
+    activeTab === 'all'
+      ? threadsWithCategory
+      : threadsWithCategory.filter((t) => t.category === activeTab),
+  [threadsWithCategory, activeTab]);
 
   const tabs = TABS.map((t) => ({
     ...t,
-    count: counts[t.key] ?? 0,
+    count: (counts as Record<string, number>)[t.key] ?? 0,
   }));
 
   const empty = EMPTY_MESSAGES[activeTab];
@@ -101,7 +109,6 @@ export default function Inbox() {
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={(key) => {
-            setLoading(true);
             setActiveTab(key as ThreadCategory | 'all');
           }}
         />
