@@ -110,6 +110,77 @@ export const getOrCreateMyAffiliate = mutation({
   },
 });
 
+// ── getUserReferralStats ──────────────────────────────────────────────────
+// Called by the customer mini app useAffiliate hook on load.
+// Returns the affiliate's referral code + referral count so the Earn page
+// can display "Your Referral Code" without depending on a separate customer table.
+// Always returns safe defaults — never throws to the client.
+
+export const getUserReferralStats = query({
+  args: { telegramId: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const SAFE_DEFAULTS = {
+      referralCode: null as string | null,
+      totalReferredCount: 0,
+      referralCount: 0,
+      totalEarned: 0,
+      paidAmount: 0,
+      pendingAmount: 0,
+      recentReferrals: [] as Array<{
+        referredTelegramId: number;
+        status: "pending" | "paid";
+        createdAt: number;
+        commissionAmount: number;
+      }>,
+    };
+
+    const telegramId = args.telegramId;
+    if (
+      typeof telegramId !== "number" ||
+      !Number.isFinite(telegramId) ||
+      telegramId <= 0
+    ) {
+      return SAFE_DEFAULTS;
+    }
+
+    try {
+      // Look up affiliate by ownerTelegramUserId (string key on this deployment)
+      const affiliate = await ctx.db
+        .query("affiliates")
+        .withIndex("by_ownerTelegramUserId", (q) =>
+          q.eq("ownerTelegramUserId", String(telegramId))
+        )
+        .first();
+
+      if (!affiliate || affiliate.status !== "active") return SAFE_DEFAULTS;
+
+      // Count how many users have been referred via this affiliate's code
+      const referrals = await ctx.db
+        .query("referrals")
+        .withIndex("by_code", (q) => q.eq("code", affiliate.code))
+        .collect();
+
+      const totalReferredCount = referrals.length;
+
+      return {
+        referralCode: affiliate.code,
+        totalReferredCount,
+        referralCount: totalReferredCount,
+        totalEarned: 0,
+        paidAmount: 0,
+        pendingAmount: 0,
+        recentReferrals: [],
+      };
+    } catch (error) {
+      console.error("[affiliates.getUserReferralStats] unexpected error", {
+        telegramId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return SAFE_DEFAULTS;
+    }
+  },
+});
+
 // ── trackReferral ─────────────────────────────────────────────────────────
 // Called by the Telegram bot on /start <code>, or any referral surface.
 // Validates the code is active, then records the referral idempotently.
