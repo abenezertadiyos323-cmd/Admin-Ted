@@ -339,5 +339,6 @@ export default defineSchema({
   })
     .index("by_code", ["code"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_referred_and_code", ["referredTelegramUserId", "code"]),
+    .index("by_referred_and_code", ["referredTelegramUserId", "code"])
+    .index("by_code_referredTelegramUserId", ["code", "referredTelegramUserId"]),
 });
