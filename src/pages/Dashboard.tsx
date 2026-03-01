@@ -398,6 +398,174 @@ function ContentPlanModal({
   );
 }
 
+// ── Affiliates Overview Modal ──────────────────────────────────────────────
+
+function relativeTime(ts: number): string {
+  const diffMs = Date.now() - ts;
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay === 1) return 'yesterday';
+  return `${diffDay}d ago`;
+}
+
+function AffiliatesModal({
+  data,
+  onClose,
+}: {
+  data: {
+    totalAffiliates: number;
+    totalReferredPeople: number;
+    newReferralsToday: number;
+    topCodes: Array<{ code: string; count: number }>;
+    recentReferrals: Array<{
+      code: string;
+      referredTelegramUserId: string;
+      createdAt: number;
+      source?: string;
+    }>;
+  };
+  onClose: () => void;
+}) {
+  const stats: [string, number][] = [
+    ['Total Affiliates', data.totalAffiliates],
+    ['Total Referred People', data.totalReferredPeople],
+    ['New Referrals Today', data.newReferralsToday],
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 z-50 flex items-end"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="w-full rounded-t-3xl p-6 space-y-5 max-h-[85vh] overflow-y-auto"
+        style={{ background: 'var(--surface)' }}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>🤝 Affiliate Overview</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-full transition-colors"
+            style={{ color: 'var(--muted)' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+        >
+          {stats.map(([label, value], idx) => (
+            <div
+              key={label}
+              className="flex items-center justify-between px-4 py-3"
+              style={idx < stats.length - 1 ? { borderBottom: '1px solid var(--border)' } : {}}
+            >
+              <p className="text-sm" style={{ color: 'var(--muted)' }}>{label}</p>
+              <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--text)' }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Top 3 Codes */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--muted)' }}>
+            Top 3 Codes by Referrals
+          </p>
+          {data.topCodes.length === 0 ? (
+            <p className="text-sm text-center py-4" style={{ color: 'var(--muted)' }}>No referrals yet</p>
+          ) : (
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+            >
+              {data.topCodes.map((item, idx) => (
+                <div
+                  key={item.code}
+                  className="flex items-center gap-3 px-4 py-3"
+                  style={idx < data.topCodes.length - 1 ? { borderBottom: '1px solid var(--border)' } : {}}
+                >
+                  <span
+                    className="text-xs font-bold w-4 flex-shrink-0 tabular-nums"
+                    style={{ color: 'var(--muted)' }}
+                  >
+                    {idx + 1}
+                  </span>
+                  <p className="flex-1 text-sm font-semibold font-mono" style={{ color: 'var(--text)' }}>
+                    {item.code}
+                  </p>
+                  <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--primary)' }}>
+                    {item.count}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Referrals */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--muted)' }}>
+            Recent Referrals (last 5)
+          </p>
+          {data.recentReferrals.length === 0 ? (
+            <p className="text-sm text-center py-4" style={{ color: 'var(--muted)' }}>No referrals yet</p>
+          ) : (
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+            >
+              {data.recentReferrals.map((r, idx) => (
+                <div
+                  key={`${r.code}-${r.referredTelegramUserId}-${idx}`}
+                  className="flex items-start gap-3 px-4 py-3"
+                  style={idx < data.recentReferrals.length - 1 ? { borderBottom: '1px solid var(--border)' } : {}}
+                >
+                  <span className="text-base flex-shrink-0 mt-0.5">🔗</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-sm font-semibold font-mono truncate" style={{ color: 'var(--text)' }}>
+                        {r.code}
+                      </p>
+                      <p className="text-xs flex-shrink-0" style={{ color: 'var(--muted)' }}>
+                        {relativeTime(r.createdAt)}
+                      </p>
+                    </div>
+                    <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--muted)' }}>
+                      uid {r.referredTelegramUserId}
+                      {r.source ? ` · ${r.source}` : ''}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl py-3 font-semibold text-sm active:scale-[0.98] transition-transform"
+          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Alert row ──────────────────────────────────────────────────────────────
 
 function AlertItem({
@@ -437,12 +605,14 @@ export default function Dashboard() {
   const user = getTelegramUser();
   const [showRestock, setShowRestock] = useState(false);
   const [showContentPlan, setShowContentPlan] = useState(false);
+  const [showAffiliates, setShowAffiliates] = useState(false);
   const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   const metrics = useQuery(api.dashboard.getHomeMetrics);
   const demand = useQuery(api.dashboard.getDemandMetrics);
+  const affiliatesData = useQuery(api.affiliates.getOverview);
 
-  if (metrics === undefined || demand === undefined) {
+  if (metrics === undefined || demand === undefined || affiliatesData === undefined) {
     return (
       <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
         <LoadingSpinner size="lg" />
@@ -601,6 +771,19 @@ export default function Dashboard() {
                 <span className="text-lg leading-none">📅</span>
                 <span className="text-sm font-semibold leading-snug">Content Plan (7d)</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setShowAffiliates(true)}
+                className="rounded-2xl p-4 flex items-center gap-2 active:scale-95 transition-transform col-span-2"
+                style={{
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <span className="text-lg leading-none">🤝</span>
+                <span className="text-sm font-semibold leading-snug">Affiliates</span>
+              </button>
             </div>
           </div>
 
@@ -661,6 +844,9 @@ export default function Dashboard() {
           availableStock={demand.availableStock}
           onClose={() => setShowContentPlan(false)}
         />
+      )}
+      {showAffiliates && affiliatesData && (
+        <AffiliatesModal data={affiliatesData} onClose={() => setShowAffiliates(false)} />
       )}
     </>
   );

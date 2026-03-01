@@ -48,6 +48,11 @@ const InventoryReason = v.union(
   v.literal("Product restored from archive")
 );
 
+const AffiliateStatus = v.union(
+  v.literal("active"),
+  v.literal("inactive")
+);
+
 /* =========================
    SCHEMA
 ========================= */
@@ -309,4 +314,30 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"])
     .index("by_source_and_createdAt", ["source", "createdAt"])
     .index("by_phoneType_and_createdAt", ["phoneType", "createdAt"]),
+
+  /* =========================
+     AFFILIATES
+  ========================= */
+  affiliates: defineTable({
+    code: v.string(),
+    ownerTelegramUserId: v.string(),
+    createdAt: v.number(),
+    status: AffiliateStatus,
+  })
+    .index("by_code", ["code"])
+    .index("by_status", ["status"])
+    .index("by_ownerTelegramUserId", ["ownerTelegramUserId"]),
+
+  /* =========================
+     REFERRALS
+  ========================= */
+  referrals: defineTable({
+    code: v.string(),
+    referredTelegramUserId: v.string(),
+    createdAt: v.number(),
+    source: v.optional(v.string()),
+  })
+    .index("by_code", ["code"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_referred_and_code", ["referredTelegramUserId", "code"]),
 });

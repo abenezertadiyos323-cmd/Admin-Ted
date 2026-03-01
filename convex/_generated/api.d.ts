@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as affiliates from "../affiliates.js";
 import type * as dashboard from "../dashboard.js";
 import type * as demand from "../demand.js";
 import type * as exchanges from "../exchanges.js";
@@ -23,6 +24,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  affiliates: typeof affiliates;
   dashboard: typeof dashboard;
   demand: typeof demand;
   exchanges: typeof exchanges;
