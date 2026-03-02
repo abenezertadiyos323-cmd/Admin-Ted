@@ -1,6 +1,7 @@
 // convex/affiliates.ts
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 // ── Ethiopia time (UTC+3) — same helper as dashboard.ts ────────────────────
 const ETH_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -107,6 +108,98 @@ export const getOrCreateMyAffiliate = mutation({
 
     // ctx.db.get cannot return null here — we just inserted this document
     return (await ctx.db.get(id))!;
+  },
+});
+
+// ── createReferralIfValid ──────────────────────────────────────────────────
+// Called by the Customer Mini App AppContext after background verification.
+// Adapted to Admin-Ted schema: affiliates.code (not referralCode),
+// referrals.referredTelegramUserId (string, not number).
+// Idempotent and self-referral safe.
+
+export const createReferralIfValid = mutation({
+  args: {
+    referralCode: v.string(),
+    referredTelegramId: v.number(),
+  },
+  handler: async (ctx, { referralCode, referredTelegramId }) => {
+    // Find active affiliate by code
+    const affiliate = await ctx.db
+      .query("affiliates")
+      .withIndex("by_code", (q) => q.eq("code", referralCode))
+      .first();
+    if (!affiliate || affiliate.status !== "active") return false;
+
+    // Prevent self-referral
+    const referredStr = String(referredTelegramId);
+    if (affiliate.ownerTelegramUserId === referredStr) return false;
+
+    // Idempotent: one referral per (code + referredTelegramUserId)
+    const existing = await ctx.db
+      .query("referrals")
+      .withIndex("by_code_referredTelegramUserId", (q) =>
+        q.eq("code", referralCode).eq("referredTelegramUserId", referredStr),
+      )
+      .first();
+    if (existing) return false;
+
+    await ctx.db.insert("referrals", {
+      code: referralCode,
+      referredTelegramUserId: referredStr,
+      createdAt: Date.now(),
+    });
+
+    return true;
+  },
+});
+
+// ── getAffiliateByCustomerId ──────────────────────────────────────────────
+// Called by useAffiliate when verifiedCustomerId is available.
+// Resolves the Convex customers _id → telegramUserId → affiliate.
+// Returns the affiliate shaped with a `referralCode` alias for `code`
+// so the Earn tab can read affiliate.referralCode consistently.
+
+export const getAffiliateByCustomerId = query({
+  args: { customerId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const customerId = args.customerId?.trim();
+    if (!customerId) return null;
+
+    // Look up customer to resolve Telegram user id
+    let telegramUserId: number | null = null;
+    try {
+      const customer = await ctx.db.get(customerId as Id<"customers">);
+      telegramUserId = customer?.telegramUserId ?? null;
+    } catch {
+      return null;
+    }
+    if (!telegramUserId) return null;
+
+    // Look up affiliate by ownerTelegramUserId
+    const affiliate = await ctx.db
+      .query("affiliates")
+      .withIndex("by_ownerTelegramUserId", (q) =>
+        q.eq("ownerTelegramUserId", String(telegramUserId)),
+      )
+      .first();
+    if (!affiliate) return null;
+
+    // Return affiliate with referralCode alias so frontend reads .referralCode
+    return { ...affiliate, referralCode: affiliate.code };
+  },
+});
+
+// ── listAffiliateCommissions ──────────────────────────────────────────────
+// Returns commissions for a given affiliate. Uses the affiliateCommissions
+// table added alongside the favorites/sessions/customers migration.
+
+export const listAffiliateCommissions = query({
+  args: { affiliateId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("affiliateCommissions")
+      .withIndex("by_affiliateId", (q) => q.eq("affiliateId", args.affiliateId))
+      .collect();
   },
 });
 

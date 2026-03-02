@@ -9,12 +9,15 @@
  */
 
 import type * as affiliates from "../affiliates.js";
+import type * as auth from "../auth.js";
 import type * as dashboard from "../dashboard.js";
 import type * as demand from "../demand.js";
 import type * as exchanges from "../exchanges.js";
+import type * as favorites from "../favorites.js";
 import type * as files from "../files.js";
 import type * as messages from "../messages.js";
 import type * as products from "../products.js";
+import type * as sessions from "../sessions.js";
 import type * as threads from "../threads.js";
 
 import type {
@@ -25,12 +28,15 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   affiliates: typeof affiliates;
+  auth: typeof auth;
   dashboard: typeof dashboard;
   demand: typeof demand;
   exchanges: typeof exchanges;
+  favorites: typeof favorites;
   files: typeof files;
   messages: typeof messages;
   products: typeof products;
+  sessions: typeof sessions;
   threads: typeof threads;
 }>;
 

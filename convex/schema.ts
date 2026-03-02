@@ -316,6 +316,48 @@ export default defineSchema({
     .index("by_phoneType_and_createdAt", ["phoneType", "createdAt"]),
 
   /* =========================
+     FAVORITES
+  ========================= */
+  favorites: defineTable({
+    userId: v.string(),
+    phoneId: v.string(),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
+  /* =========================
+     SESSIONS
+  ========================= */
+  sessions: defineTable({
+    createdAt: v.number(),
+  }),
+
+  /* =========================
+     CUSTOMERS
+  ========================= */
+  customers: defineTable({
+    telegramUserId: v.number(),
+    username: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    photoUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_telegramUserId", ["telegramUserId"]),
+
+  /* =========================
+     AFFILIATE COMMISSIONS
+  ========================= */
+  affiliateCommissions: defineTable({
+    affiliateId: v.string(),
+    orderId: v.optional(v.string()),
+    orderAmount: v.number(),
+    commissionPercent: v.number(),
+    commissionAmount: v.number(),
+    status: v.string(),
+    createdAt: v.number(),
+  }).index("by_affiliateId", ["affiliateId"]),
+
+  /* =========================
      AFFILIATES
   ========================= */
   affiliates: defineTable({
