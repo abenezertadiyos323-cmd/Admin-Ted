@@ -111,8 +111,7 @@ export const searchProducts = query({
         .withSearchIndex("search_products", (s) =>
           s.search("searchNormalized", term).eq("isArchived", false),
         )
-        .take(limit)
-        .collect();
+        .take(limit);
 
       return rawResults.map((p: any) => ({
         id: p._id,
