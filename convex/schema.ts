@@ -132,6 +132,10 @@ export default defineSchema({
   })
     .index("by_type", ["type"])
     .index("by_type_searchNormalized", ["type", "searchNormalized"])
+    .searchIndex("search_products", {
+      searchField: "searchNormalized",
+      filterFields: ["isArchived"],
+    })
     .index("by_isArchived_createdAt", ["isArchived", "createdAt"])
     .index("by_archivedAt_and_stockQuantity", ["archivedAt", "stockQuantity"])
     .index("by_archivedAt", ["archivedAt"])
