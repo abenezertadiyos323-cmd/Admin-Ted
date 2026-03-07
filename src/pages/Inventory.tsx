@@ -815,6 +815,29 @@ function InventoryContent() {
                 </select>
               </div>
 
+              {/* RAM */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>RAM</p>
+                <select
+                  value={draftFilters.ramGb ?? ''}
+                  onChange={(e) =>
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      ramGb: e.target.value ? Number(e.target.value) : undefined,
+                    }))
+                  }
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none transition-colors appearance-none"
+                  style={inputStyle}
+                >
+                  <option value="">Any</option>
+                  {RAM_OPTIONS.map((gb) => (
+                    <option key={gb} value={gb}>
+                      {gb} GB
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Has Images */}
               <div>
                 <div className="flex items-center justify-between">
