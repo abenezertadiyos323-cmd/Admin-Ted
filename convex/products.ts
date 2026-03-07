@@ -148,7 +148,7 @@ async function normalizeImageUrls(
 //  QUERIES
 // ================================================================
 
-const LOW_STOCK_THRESHOLD = 5;
+const LOW_STOCK_THRESHOLD = 2;
 
 /**
  * Public query used by the customer mini app.
