@@ -459,4 +459,18 @@ export default defineSchema({
     .index("by_sessionId", ["sessionId"])
     .index("by_status", ["status"])
     .index("by_createdAt", ["createdAt"]),
+
+  /* =========================
+     ADMIN SETTINGS
+  ========================= */
+  adminSettings: defineTable({
+    storeName: v.optional(v.string()),
+    supportContact: v.optional(v.string()),
+    telegramBotLink: v.optional(v.string()),
+    phoneLowStockThreshold: v.optional(v.number()),
+    accessoryLowStockThreshold: v.optional(v.number()),
+    exchangeAlertsEnabled: v.optional(v.boolean()),
+    inboxAlertsEnabled: v.optional(v.boolean()),
+    updatedAt: v.number(),
+  }),
 });
