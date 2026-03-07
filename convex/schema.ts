@@ -414,4 +414,49 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"])
     .index("by_referred_and_code", ["referredTelegramUserId", "code"])
     .index("by_code_referredTelegramUserId", ["code", "referredTelegramUserId"]),
+
+  /* =========================
+     PHONE ACTIONS
+  ========================= */
+  phoneActions: defineTable({
+    sessionId: v.string(),
+    actionType: v.union(
+      v.literal("inquiry"),
+      v.literal("exchange"),
+      v.literal("call"),
+      v.literal("map"),
+    ),
+    sourceTab: v.union(
+      v.literal("home"),
+      v.literal("search"),
+      v.literal("saved"),
+      v.literal("product_detail"),
+      v.literal("about"),
+    ),
+    sourceProductId: v.optional(v.string()),
+    timestamp: v.number(),
+    phoneId: v.optional(v.string()),
+    variantId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_actionType", ["actionType"])
+    .index("by_createdAt", ["createdAt"]),
+
+  /* =========================
+     EXCHANGE REQUESTS
+  ========================= */
+  exchangeRequests: defineTable({
+    sessionId: v.string(),
+    desiredPhoneId: v.string(),
+    offeredModel: v.string(),
+    offeredStorageGb: v.number(),
+    offeredCondition: v.string(),
+    offeredNotes: v.optional(v.string()),
+    status: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_status", ["status"])
+    .index("by_createdAt", ["createdAt"]),
 });
