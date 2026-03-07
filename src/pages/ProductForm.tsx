@@ -469,16 +469,6 @@ export default function ProductForm() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-app-text mb-1.5 block">RAM</label>
-                    <input
-                      type="text"
-                      value={form.ram}
-                      onChange={(e) => update('ram', e.target.value)}
-                      placeholder="e.g. 8GB"
-                      className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                    />
-                  </div>
-                  <div>
                     <label className="text-xs font-medium text-app-text mb-1.5 block">Storage *</label>
                     <input
                       type="text"
@@ -490,6 +480,27 @@ export default function ProductForm() {
                     />
                     {errors.storage && <p className="text-xs text-red-500 mt-1">{errors.storage}</p>}
                   </div>
+                  <div>
+                    <label className="text-xs font-medium text-app-text mb-1.5 block">RAM</label>
+                    <input
+                      type="text"
+                      value={form.ram}
+                      onChange={(e) => update('ram', e.target.value)}
+                      placeholder="e.g. 8GB"
+                      className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-app-text mb-1.5 block">Color</label>
+                  <input
+                    type="text"
+                    value={form.color}
+                    onChange={(e) => update('color', e.target.value)}
+                    placeholder="e.g. Midnight Black, Space Gray, Gold"
+                    className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                  />
                 </div>
 
                 {/* Condition */}
@@ -579,25 +590,12 @@ export default function ProductForm() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-app-text mb-1.5 block">Color</label>
-                  <input
-                    type="text"
-                    value={form.color}
-                    onChange={(e) => update('color', e.target.value)}
-                    placeholder="e.g. Blue"
-                    className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
                   <label className="text-xs font-medium text-app-text mb-1.5 block">Operating System</label>
                   <input
                     type="text"
                     value={form.operatingSystem}
                     onChange={(e) => update('operatingSystem', e.target.value)}
-                    placeholder="e.g. iOS"
+                    placeholder="e.g. iOS 17, Android 14"
                     className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
@@ -692,13 +690,14 @@ export default function ProductForm() {
           </div>
 {/* Description */}
           <div className="card-interactive p-4 cursor-default">
-            <label className="text-xs font-semibold text-muted uppercase tracking-wide mb-3 block">
+            <label className="text-xs font-semibold text-muted uppercase tracking-wide mb-1 block">
               Description
             </label>
+            <p className="text-[11px] text-muted mb-2.5">Optional extra notes only. Use the fields above for specs like storage, RAM, color, battery.</p>
             <textarea
               value={form.description}
               onChange={(e) => update('description', e.target.value)}
-              placeholder="Short summary about the product (color, accessories included, etc.)"
+              placeholder="e.g. Comes with original box and charger. Minor scratch on the back."
               rows={3}
               className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text placeholder:text-muted outline-none focus:ring-2 focus:ring-indigo-500 transition-colors resize-none"
             />
