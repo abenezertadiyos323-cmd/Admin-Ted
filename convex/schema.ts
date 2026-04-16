@@ -125,7 +125,7 @@ export default defineSchema({
     createdBy: v.string(),
     updatedAt: v.number(),
     updatedBy: v.string(),
-    sellerId: v.string(),
+    sellerId: v.optional(v.string()),
 
     // Normalized search field: lowercase phoneType + storage + ram + condition.
     // Optional so legacy rows remain valid until backfillSearchNormalized is run.
@@ -484,7 +484,7 @@ export default defineSchema({
      N8N BOT WORKFLOW SESSIONS
   ========================= */
   botWorkflowSessions: defineTable({
-    sellerId: v.string(),
+    sellerId: v.optional(v.string()),
     chatId: v.string(),
     stage: v.string(),
     activeFlow: v.string(),
@@ -502,7 +502,7 @@ export default defineSchema({
      N8N BOT LEADS
   ========================= */
   botLeads: defineTable({
-    sellerId: v.string(),
+    sellerId: v.optional(v.string()),
     chatId: v.string(),
     username: v.optional(v.string()),
     name: v.optional(v.string()),
@@ -522,7 +522,7 @@ export default defineSchema({
      N8N ORDER INQUIRIES
   ========================= */
   botOrderInquiries: defineTable({
-    sellerId: v.string(),
+    sellerId: v.optional(v.string()),
     chatId: v.string(),
     username: v.optional(v.string()),
     phoneType: v.optional(v.string()),
@@ -538,7 +538,7 @@ export default defineSchema({
      N8N EXCHANGE SUBMISSIONS
   ========================= */
   botExchangeSubmissions: defineTable({
-    sellerId: v.string(),
+    sellerId: v.optional(v.string()),
     chatId: v.string(),
     username: v.optional(v.string()),
     phoneType: v.optional(v.string()),
@@ -560,7 +560,7 @@ export default defineSchema({
      N8N ADMIN INBOX RECORDS
   ========================= */
   botInboxRecords: defineTable({
-    sellerId: v.string(),
+    sellerId: v.optional(v.string()),
     chatId: v.string(),
     username: v.optional(v.string()),
     name: v.optional(v.string()),
@@ -584,7 +584,7 @@ export default defineSchema({
      N8N NOTIFY INTENTS
   ========================= */
   botNotifyRequests: defineTable({
-    sellerId: v.string(),
+    sellerId: v.optional(v.string()),
     chatId: v.string(),
     username: v.optional(v.string()),
     requested_phone: v.string(),
