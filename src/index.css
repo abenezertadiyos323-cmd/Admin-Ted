@@ -5,7 +5,7 @@
    DESIGN TOKENS — dark + yellow theme
    Use in CSS:     var(--primary), var(--bg), etc.
    Use in Tailwind: bg-bg, bg-surface, text-muted, bg-primary, etc.
-============================================================ */
+ ============================================================ */
 :root {
   --bg:                #0B0F1A;
   --surface:           #121A2A;
@@ -79,7 +79,7 @@ body {
    Quick scale-up + slight overshoot-back so the badge "pops" when a new
    notification arrives.  Duration matches useBadgePop's POP_MS (220ms).
    will-change: transform  keeps the animation on the GPU / compositor.
-──────────────────────────────────────────────────────────────────────── */
+ ──────────────────────────────────────────────────────────────────────── */
 @keyframes badge-pop {
   0%   { transform: scale(1);    }
   40%  { transform: scale(1.25); }
