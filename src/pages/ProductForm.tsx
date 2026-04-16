@@ -1,580 +1,725 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation } from 'convex/react';
-import { Camera, X, Plus, Trash } from 'lucide-react';
-import PageHeader from '../components/PageHeader';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
+import {
+  ArrowLeft,
+  Camera,
+  Loader2,
+  Trash2,
+  Plus,
+  AlertCircle,
+  Smartphone,
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  Settings,
+  History,
+  Archive,
+  RotateCcw
+} from 'lucide-react';
+import PageHeader from '../components/PageHeader';
 import { getTelegramUser } from '../lib/telegram';
-import { processImage } from '../lib/imageProcessor';
-import { normalizePhoneType, validatePhoneType } from '../lib/phoneTypeUtils';
-import { PHONE_STORAGE_OPTIONS } from '../lib/storageOptions';
-import type { Condition, ProductType } from '../types';
+import type { ProductType, Condition } from '../types';
 
-const CONDITIONS: Condition[] = ['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor'];
+const PRODUCT_TYPES: { key: ProductType; label: string; icon: string }[] = [
+  { key: 'phone', label: 'Phone', icon: '📱' },
+  { key: 'accessory', label: 'Accessory', icon: '🎧' },
+];
 
-const RAM_OPTIONS = ['8GB', '12GB'] as const;
+const STORAGE_OPTIONS = ['32GB', '64GB', '128GB', '256GB', '512GB', '1TB'] as const;
+const CONDITION_OPTIONS: Condition[] = ['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor'];
 
-export interface VariantInput {
-  id: string; // UI key
+const RAM_OPTIONS = ['4GB', '6GB', '8GB', '12GB', '16GB', '24GB'];
+
+// Predefined model suggestions for the "Quick Selection" tab
+const IPHONE_MODELS = [
+  "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15 Plus", "iPhone 15",
+  "iPhone 14 Pro Max", "iPhone 14 Pro", "iPhone 14 Plus", "iPhone 14",
+  "iPhone 13 Pro Max", "iPhone 13 Pro", "iPhone 13", "iPhone 13 mini",
+  "iPhone 12 Pro Max", "iPhone 12 Pro", "iPhone 12", "iPhone 11",
+];
+
+const SAMSUNG_MODELS = [
+  "Galaxy S24 Ultra", "Galaxy S24+", "Galaxy S24",
+  "Galaxy S23 Ultra", "Galaxy S23+", "Galaxy S23",
+  "Galaxy Z Fold 5", "Galaxy Z Flip 5",
+  "Galaxy S22 Ultra", "Galaxy S21 Ultra",
+];
+
+const MODEL_PRESETS = [
+  { label: 'iPhone', models: IPHONE_MODELS },
+  { label: 'Samsung', models: SAMSUNG_MODELS }
+];
+
+interface Variant {
   storage: string;
-  ram: string; // For Samsung
-  priceText: string;
-  stockQuantity: string;
+  ram?: string;
+  price: number;
+  stock: number;
 }
-
-interface FormData {
-  type: ProductType;
-  brand: 'iPhone' | 'Samsung' | '';
-  phoneType: string;
-  condition: Condition | '';
-  exchangeEnabled: boolean;
-  description: string;
-  
-  // Specifics
-  batteryHealth: string;
-  modelOrigin: string; // iPhone
-  simType: string; // Uses as SIM Type / SIM Slot
-  network: string; // Samsung
-  
-  // Variant system
-  variants: VariantInput[];
-  
-  // Accessory fallback
-  priceText: string;
-  stockQuantity: string;
-}
-
-interface ImageSlot {
-  preview: string;
-  blob?: Blob;
-}
-
-const IMAGE_SLOT_COUNT = 3;
-const formatPriceForInput = (price: number) => price.toLocaleString('en-US');
-const parsePriceInput = (value: string): number | null => {
-  const digitsOnly = value.replace(/\D/g, '');
-  if (!digitsOnly) return null;
-  const parsed = Number.parseInt(digitsOnly, 10);
-  return Number.isNaN(parsed) ? null : parsed;
-};
-
-const isProductType = (value: string | null): value is ProductType =>
-  value === 'phone' || value === 'accessory';
 
 export default function ProductForm() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const isEdit = Boolean(id);
-  const searchType = searchParams.get('type');
-  const defaultType: ProductType = isProductType(searchType) ? searchType : 'phone';
-
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  
-  const [form, setForm] = useState<FormData>({
-    type: defaultType,
-    brand: defaultType === 'phone' ? 'iPhone' : '',
-    phoneType: '',
-    condition: '',
-    exchangeEnabled: false,
-    description: '',
-    batteryHealth: '',
-    modelOrigin: '',
-    simType: '',
-    network: '',
-    variants: [{ id: Date.now().toString(), storage: '', ram: '', priceText: '', stockQuantity: '1' }],
-    priceText: '',
-    stockQuantity: '1',
-  });
-  
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [imageSlots, setImageSlots] = useState<Array<ImageSlot | null>>(
-    () => Array.from({ length: IMAGE_SLOT_COUNT }, () => null),
-  );
-  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const formPopulated = useRef(false);
-
+  const navigate = useNavigate();
   const user = getTelegramUser();
-  const getInventoryPath = () => {
-    return `/inventory?type=${form.type}`;
-  };
+  const isEditing = !!id;
 
-  const existingProduct = useQuery(
-    api.products.getProductById,
-    isEdit && id ? { productId: id as Id<'products'> } : 'skip',
-  );
-  const loading = isEdit && existingProduct === undefined;
+  const product = useQuery(api.products.getProductById, {
+    productId: id as Id<'products'>,
+  });
 
-  useEffect(() => {
-    if (existingProduct && !formPopulated.current) {
-      formPopulated.current = true;
-      
-      let mappedBrand: 'iPhone' | 'Samsung' | '' = '';
-      if (existingProduct.type === 'phone') {
-        const legacyBrand = existingProduct.brand?.toLowerCase() || '';
-        if (legacyBrand.includes('apple') || legacyBrand.includes('iphone')) mappedBrand = 'iPhone';
-        else if (legacyBrand.includes('samsung')) mappedBrand = 'Samsung';
-        else mappedBrand = 'iPhone'; // default
-      }
-
-      setForm({
-        type: existingProduct.type,
-        brand: mappedBrand,
-        phoneType: existingProduct.phoneType ?? '',
-        condition: (existingProduct.condition as Condition) ?? '',
-        exchangeEnabled: existingProduct.type === 'phone' ? existingProduct.exchangeEnabled : false,
-        description: existingProduct.description ?? '',
-        batteryHealth: existingProduct.batteryHealth ?? '',
-        modelOrigin: existingProduct.modelOrigin ?? '',
-        simType: existingProduct.simType ?? '',
-        network: existingProduct.network ?? '',
-        variants: existingProduct.variants?.map((v, i) => ({
-          id: String(i),
-          storage: v.storage,
-          ram: v.ram ?? '',
-          priceText: v.price > 0 ? formatPriceForInput(v.price) : '',
-          stockQuantity: String(v.stock)
-        })) || [{ id: Date.now().toString(), storage: '', ram: '', priceText: '', stockQuantity: '1' }],
-        priceText: existingProduct.price > 0 ? formatPriceForInput(existingProduct.price) : '',
-        stockQuantity: String(existingProduct.stockQuantity),
-      });
-      
-      const existingImages = Array.isArray(existingProduct.images) ? existingProduct.images : [];
-      setImageSlots(
-        Array.from({ length: IMAGE_SLOT_COUNT }, (_, index) => {
-          const url = existingImages[index];
-          if (typeof url !== 'string' || url.trim().length === 0) return null;
-          return { preview: url };
-        }),
-      );
-    }
-  }, [existingProduct]);
-
-  useEffect(() => {
-    if (form.type === 'accessory' && form.exchangeEnabled) {
-      setForm((prev) => ({ ...prev, exchangeEnabled: false }));
-    }
-  }, [form.type, form.exchangeEnabled]);
-
+  const createProduct = useMutation(api.products.createProduct);
+  const updateProduct = useMutation(api.products.updateProduct);
+  const archiveProduct = useMutation(api.products.archiveProduct);
+  const restoreProduct = useMutation(api.products.restoreProduct);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
-  const getStorageUrl = useMutation(api.files.getStorageUrl);
-  const createProductMutation = useMutation(api.products.createProduct);
-  const updateProductMutation = useMutation(api.products.updateProduct);
-  const archiveProductMutation = useMutation(api.products.archiveProduct);
-  const restoreProductMutation = useMutation(api.products.restoreProduct);
 
-  const handleSlotPress = (slotIndex: number) => {
-    setPickerSlot(slotIndex);
-    fileInputRef.current?.click();
-  };
+  const [activeTab, setActiveTab] = useState<'info' | 'variants' | 'specs' | 'history'>('info');
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRemoveImage = (slotIndex: number) => {
-    setImageSlots((prev) => {
-      const next = [...prev];
-      next[slotIndex] = null;
-      return next;
-    });
-  };
+  // Form State
+  const [type, setType] = useState<ProductType>((searchParams.get('type') as ProductType) || 'phone');
+  const [phoneType, setPhoneType] = useState('');
+  const [brand, setBrand] = useState('Apple'); // Legacy safety
+  const [condition, setCondition] = useState<Condition>('Excellent');
+  const [description, setDescription] = useState('');
+  const [exchangeEnabled, setExchangeEnabled] = useState(true);
+  const [images, setImages] = useState<string[]>([]);
+  
+  // Single Pricing (Legacy/Simple)
+  const [price, setPrice] = useState('');
+  const [stockQuantity, setStockQuantity] = useState('1');
+  const [storage, setStorage] = useState('128GB');
+  const [ram, setRam] = useState('8GB');
 
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || pickerSlot === null) return;
-    e.target.value = '';
-    const slotIndex = pickerSlot;
-    const { blob, previewUrl } = await processImage(file, 1200, 0.8);
-    setImageSlots((prev) => {
-      const next = [...prev];
-      next[slotIndex] = { blob, preview: previewUrl };
-      return next;
-    });
-    setPickerSlot(null);
-  };
+  // Variant Pricing (V2)
+  const [useVariants, setUseVariants] = useState(false);
+  const [variants, setVariants] = useState<Variant[]>([]);
 
-  const uploadImageUrls = async (): Promise<string[]> => {
-    const uploadedBySlot = new Map<number, string>();
-    for (let slotIndex = 0; slotIndex < imageSlots.length; slotIndex += 1) {
-      const slot = imageSlots[slotIndex];
-      if (!slot?.blob) continue;
-      const uploadUrl = await generateUploadUrl({});
-      const resp = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': slot.blob.type },
-        body: slot.blob,
-      });
-      if (!resp.ok) throw new Error(`Image ${slotIndex + 1} upload failed`);
-      const { storageId } = (await resp.json()) as { storageId?: string };
-      const resolvedUrl = await getStorageUrl({ storageId: storageId as Id<'_storage'> });
-      uploadedBySlot.set(slotIndex, resolvedUrl as string);
-    }
-    return imageSlots
-      .map((slot, slotIndex) => uploadedBySlot.get(slotIndex) || (slot && !slot.blob ? slot.preview : null))
-      .filter((url): url is string => url !== null)
-      .slice(0, IMAGE_SLOT_COUNT);
-  };
+  // Specs
+  const [batteryHealth, setBatteryHealth] = useState('');
+  const [screenSize, setScreenSize] = useState('');
+  const [color, setColor] = useState('');
+  const [simType, setSimType] = useState('Physical + eSIM');
 
-  const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof FormData, string>> = {};
-    const validation = validatePhoneType(form.phoneType);
-    if (!validation.valid) newErrors.phoneType = validation.error || 'Phone type is required';
-    if (form.type === 'phone' && !form.condition) newErrors.condition = 'Condition required for phones';
-    
-    if (form.type === 'phone') {
-        if (form.variants.length === 0) newErrors.variants = 'Must add at least one variant';
-        const invalidVariants = form.variants.filter(v => !v.storage || !parsePriceInput(v.priceText) || !v.stockQuantity);
-        if (invalidVariants.length > 0) newErrors.variants = 'All variants must have storage, valid price, and stock';
-    } else {
-        const safePrice = parsePriceInput(form.priceText);
-        if (safePrice === null || !Number.isFinite(safePrice) || safePrice <= 0) newErrors.priceText = 'Valid price required';
-        if (!form.stockQuantity || Number(form.stockQuantity) < 0) newErrors.stockQuantity = 'Valid quantity required';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Quick Select
+  const [showQuickSelect, setShowQuickSelect] = useState(false);
+  const [quickSelectBrand, setQuickSelectBrand] = useState(0);
 
-  const handleSave = async () => {
-    setSaveError(null);
-    if (!validate()) return;
-    setSaving(true);
-    
-    try {
-      const allImages = await uploadImageUrls();
-      const sellerId = String(user.id);
+  useEffect(() => {
+    if (product) {
+      setType(product.type);
+      setPhoneType(product.phoneType || '');
+      setCondition(product.condition || 'Excellent');
+      setDescription(product.description || '');
+      setExchangeEnabled(product.exchangeEnabled);
+      setImages(product.images || []);
+      setPrice(product.price.toString());
+      setStockQuantity(product.stockQuantity.toString());
+      setStorage(product.storage || '128GB');
+      setRam(product.ram || '8GB');
       
-      const mappedVariants = form.type === 'phone' ? form.variants.map(v => ({
-        storage: v.storage,
-        ram: form.brand === 'Samsung' && v.ram ? v.ram : undefined,
-        price: parsePriceInput(v.priceText) || 0,
-        stock: Number(v.stockQuantity) || 0
-      })).filter(v => v.price > 0 && v.stock >= 0) : undefined;
-      
-      const basePrice = form.type === 'phone' && mappedVariants && mappedVariants.length > 0
-        ? Math.min(...mappedVariants.map(v => v.price))
-        : parsePriceInput(form.priceText) || 0;
-        
-      const baseStock = form.type === 'phone' && mappedVariants
-        ? mappedVariants.reduce((sum, v) => sum + v.stock, 0)
-        : Number(form.stockQuantity);
-
-      const common = {
-        type: form.type,
-        brand: form.type === 'phone' ? (form.brand === 'iPhone' ? 'Apple' : 'Samsung') : undefined,
-        phoneType: normalizePhoneType(form.phoneType),
-        storage: form.type === 'phone' && mappedVariants ? mappedVariants.map(v => v.storage).join(', ') : undefined,
-        condition: form.type === 'phone' ? (form.condition as Condition) || undefined : undefined,
-        price: basePrice,
-        stockQuantity: baseStock,
-        exchangeEnabled: form.type === 'phone' ? form.exchangeEnabled : false,
-        description: form.description || undefined,
-        images: allImages,
-        updatedBy: sellerId,
-        
-        batteryHealth: form.type === 'phone' && form.brand === 'iPhone' ? form.batteryHealth || undefined : undefined,
-        modelOrigin: form.type === 'phone' && form.brand === 'iPhone' ? form.modelOrigin || undefined : undefined,
-        simType: form.type === 'phone' ? form.simType || undefined : undefined,
-        network: form.type === 'phone' && form.brand === 'Samsung' ? form.network || undefined : undefined,
-        variants: mappedVariants,
-      };
-
-      if (isEdit && id) {
-        await updateProductMutation({ productId: id as Id<'products'>, ...common });
-      } else {
-        await createProductMutation({ ...common, createdBy: sellerId, sellerId });
+      if (product.variants && product.variants.length > 0) {
+        setUseVariants(true);
+        setVariants(product.variants);
       }
-      navigate(getInventoryPath());
+
+      setBatteryHealth(product.batteryHealth || '');
+      setScreenSize(product.screenSize || '');
+      setColor(product.color || '');
+      setSimType(product.simType || 'Physical + eSIM');
+    }
+  }, [product]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const newImages = [...images];
+      for (let i = 0; i < files.length; i++) {
+        if (newImages.length >= 3) break;
+        
+        const postUrl = await generateUploadUrl();
+        const result = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": files[i].type },
+          body: files[i],
+        });
+        const { storageId } = await result.json();
+        
+        // In this architecture, we use direct URLs from the storage helper
+        // but for simplicity in this bite-sized form, we'll store storageId 
+        // and the backend normalizer will resolve it. 
+        // Actually, let's keep it consistent with Micky Mobile which often 
+        // just pushes the storageId or resolved URL.
+        newImages.push(storageId);
+      }
+      setImages(newImages);
     } catch (err) {
       console.error(err);
-      setSaveError(err instanceof Error ? err.message : 'Save failed');
+      setError("Failed to upload image");
     } finally {
-      setSaving(false);
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
+
+  const addVariant = () => {
+    setVariants([...variants, { storage: '128GB', ram: '8GB', price: 0, stock: 1 }]);
+  };
+
+  const updateVariant = (index: number, field: keyof Variant, value: any) => {
+    const newVariants = [...variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setVariants(newVariants);
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phoneType) {
+      setError("Product name/model is required");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const commonData = {
+      type,
+      phoneType,
+      condition,
+      description,
+      exchangeEnabled,
+      images,
+      updatedBy: user.first_name,
+      batteryHealth,
+      screenSize,
+      color,
+      simType,
+    };
+
+    try {
+      if (isEditing) {
+        await updateProduct({
+          productId: id as Id<'products'>,
+          ...commonData,
+          price: parseFloat(price) || 0,
+          stockQuantity: parseInt(stockQuantity) || 0,
+          storage,
+          ram,
+          variants: useVariants ? variants : undefined,
+        });
+      } else {
+        await createProduct({
+          ...commonData,
+          price: parseFloat(price) || 0,
+          stockQuantity: parseInt(stockQuantity) || 0,
+          storage,
+          ram,
+          variants: useVariants ? variants : undefined,
+          createdBy: user.first_name,
+          sellerId: 'tedytech', // Hardcoded for this admin instance
+        });
+      }
+      navigate('/inventory');
+    } catch (err) {
+      console.error(err);
+      setError("Failed to save product. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleArchive = async () => {
-    if (!id || !isEdit) return;
-    setSaving(true);
+    if (!id) return;
+    if (!confirm("Are you sure you want to archive this product?")) return;
     try {
-      await archiveProductMutation({ productId: id as Id<'products'> });
-      navigate(getInventoryPath());
+      await archiveProduct({ productId: id as Id<'products'> });
+      navigate('/inventory');
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to archive');
-      setSaving(false);
+      setError("Failed to archive product");
     }
   };
 
   const handleRestore = async () => {
-    if (!id || !isEdit) return;
-    setSaving(true);
+    if (!id) return;
     try {
-      await restoreProductMutation({ productId: id as Id<'products'> });
-      navigate(getInventoryPath());
+      await restoreProduct({ productId: id as Id<'products'> });
+      navigate('/inventory?filter=all');
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to restore');
-      setSaving(false);
+      setError("Failed to restore product");
     }
   };
 
-  const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
-  };
-  
-  const updateVariant = (index: number, key: keyof VariantInput, value: string) => {
-      const newVariants = [...form.variants];
-      newVariants[index] = { ...newVariants[index], [key]: value };
-      update('variants', newVariants);
-  };
-  
-  const addVariant = () => {
-      update('variants', [...form.variants, { id: Date.now().toString(), storage: '', ram: '', priceText: '', stockQuantity: '1' }]);
-  };
-  
-  const removeVariant = (index: number) => {
-      if (form.variants.length > 1) {
-          update('variants', form.variants.filter((_, i) => i !== index));
-      }
+  const selectPresetModel = (model: string) => {
+    setPhoneType(model);
+    setShowQuickSelect(false);
   };
 
-  if (loading) return <div className="flex items-center justify-center h-screen bg-bg"><LoadingSpinner size="lg" /></div>;
-
-  const isPhone = form.type === 'phone';
-  const isIphone = form.brand === 'iPhone';
+  if (isEditing && product === undefined) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-bg">
-      <PageHeader title={isEdit ? 'Edit Product' : `Add ${defaultType === 'phone' ? 'Phone' : 'Accessory'}`} showBack />
-        <div className="px-4 py-4 space-y-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
-          {/* Images Picker */}
-          <div className="card-interactive p-4 cursor-default">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Images</p>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
-            <div className="grid grid-cols-3 gap-3">
-              {Array.from({ length: IMAGE_SLOT_COUNT }, (_, i) => {
-                const displayUrl = imageSlots[i]?.preview;
-                return (
-                  <div key={i} className="space-y-1">
-                    <p className="text-[11px] text-muted font-medium">Upload Image {i + 1}</p>
-                    <div className="relative">
-                      <button type="button" onClick={() => handleSlotPress(i)} className="w-full h-20 rounded-xl border-2 border-dashed flex items-center justify-center bg-surface-2 active:scale-95 transition-transform border-[var(--border)]">
-                        {displayUrl ? <img src={displayUrl} alt="" className="w-full h-full object-cover" /> : <Camera size={20} className="text-muted" />}
-                      </button>
-                      {displayUrl && (
-                        <button type="button" onClick={() => handleRemoveImage(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center">
-                          <X size={12} />
-                        </button>
-                      )}
+    <div className="min-h-screen bg-bg pb-24">
+      <PageHeader 
+        title={isEditing ? 'Edit Product' : 'Add Product'} 
+        backTo="/inventory"
+        action={
+          isEditing && !product?.isArchived ? (
+            <button onClick={handleArchive} className="text-red-500 p-2">
+              <Archive size={20} />
+            </button>
+          ) : isEditing && product?.isArchived ? (
+            <button onClick={handleRestore} className="text-green-500 p-2">
+              <RotateCcw size={20} />
+            </button>
+          ) : null
+        }
+      />
+
+      {/* Tabs */}
+      <div className="flex bg-surface sticky top-0 z-10 border-b border-border">
+        <button 
+          onClick={() => setActiveTab('info')}
+          className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${activeTab === 'info' ? 'text-primary border-b-2 border-primary' : 'text-muted'}`}
+        >
+          < स्मार्टफोन size={16} /> Info
+        </button>
+        <button 
+          onClick={() => setActiveTab('variants')}
+          className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${activeTab === 'variants' ? 'text-primary border-b-2 border-primary' : 'text-muted'}`}
+        >
+          <Plus size={16} /> Variants
+        </button>
+        <button 
+          onClick={() => setActiveTab('specs')}
+          className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${activeTab === 'specs' ? 'text-primary border-b-2 border-primary' : 'text-muted'}`}
+        >
+          <Settings size={16} /> Specs
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-4 space-y-6">
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex gap-2 text-red-500 text-sm">
+            <AlertCircle size={18} className="flex-shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        {/* Section: Basic Info */}
+        {activeTab === 'info' && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            {/* Type Toggle */}
+            <div className="flex bg-surface-2 p-1 rounded-xl border border-border">
+              {PRODUCT_TYPES.map((pt) => (
+                <button
+                  key={pt.key}
+                  type="button"
+                  onClick={() => setType(pt.key)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${type === pt.key ? 'bg-primary text-primary-fg shadow-sm' : 'text-muted'}`}
+                >
+                  {pt.icon} {pt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Images */}
+            <div>
+              <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Photos (Max 3)</label>
+              <div className="flex gap-3">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-border bg-surface-2">
+                    <img src={img.startsWith('http') ? img : `https://fastidious-schnauzer-265.convex.cloud/api/storage/${img}`} className="w-full h-full object-cover" alt="" />
+                    <button 
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 w-6 h-6 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                {images.length < 3 && (
+                  <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted active:scale-95 transition-transform cursor-pointer">
+                    {uploading ? <Loader2 className="animate-spin" size={20} /> : <Camera size={24} />}
+                    <span className="text-[10px] mt-1 font-bold">Add Photo</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} multiple />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Model Name */}
+            <div>
+              <div className="flex justify-between items-end mb-2">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Model Name</label>
+                {type === 'phone' && (
+                  <button 
+                    type="button"
+                    onClick={() => setShowQuickSelect(true)}
+                    className="text-xs font-bold text-primary active:opacity-60"
+                  >
+                    Quick Select
+                  </button>
+                )}
+              </div>
+              <input 
+                type="text"
+                value={phoneType}
+                onChange={(e) => setPhoneType(e.target.value)}
+                placeholder={type === 'phone' ? "e.g. iPhone 15 Pro" : "e.g. AirPods Pro"}
+                className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+              />
+            </div>
+
+            {/* Pricing Mode Toggle */}
+            {type === 'phone' && (
+              <div 
+                className={`p-4 rounded-xl border transition-colors ${useVariants ? 'border-primary bg-primary/5' : 'border-border bg-surface-2'}`}
+                onClick={() => setUseVariants(!useVariants)}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold">Use Multi-Variant Pricing</h3>
+                    <p className="text-[11px] text-muted">Set different prices for storage sizes (e.g. 128GB vs 256GB)</p>
+                  </div>
+                  <div className={`w-10 h-6 rounded-full relative transition-colors ${useVariants ? 'bg-primary' : 'bg-muted/20'}`}>
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${useVariants ? 'right-1' : 'left-1'}`} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!useVariants ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Price (ETB)</label>
+                  <input 
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Stock</label>
+                  <input 
+                    type="number"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-surface-2 border border-border rounded-xl flex items-center justify-between">
+                <span className="text-sm font-semibold">{variants.length} variant(s) configured</span>
+                <button type="button" onClick={() => setActiveTab('variants')} className="text-xs font-bold text-primary">Edit Variants</button>
+              </div>
+            )}
+
+            {/* Simple storage/ram if no variants */}
+            {!useVariants && type === 'phone' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Storage</label>
+                  <select 
+                    value={storage}
+                    onChange={(e) => setStorage(e.target.value)}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm outline-none"
+                  >
+                    {STORAGE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">RAM</label>
+                  <select 
+                    value={ram}
+                    onChange={(e) => setRam(e.target.value)}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm outline-none"
+                  >
+                    {RAM_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Condition */}
+            <div>
+              <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Condition</label>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                {CONDITION_OPTIONS.map(opt => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setCondition(opt)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-all ${condition === opt ? 'bg-primary border-primary text-primary-fg' : 'bg-surface-2 border-border text-muted'}`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Exchange Toggle */}
+            {type === 'phone' && (
+              <button
+                type="button"
+                onClick={() => setExchangeEnabled(!exchangeEnabled)}
+                className={`w-full p-4 rounded-xl border flex items-center justify-between transition-colors ${exchangeEnabled ? 'border-primary/30 bg-primary/5' : 'border-border bg-surface-2'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${exchangeEnabled ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-muted'}`}>
+                    <RotateCcw size={20} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold">Accept Exchanges</p>
+                    <p className="text-[11px] text-muted">Customers can trade-in for this model</p>
+                  </div>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${exchangeEnabled ? 'border-primary bg-primary' : 'border-border'}`}>
+                  {exchangeEnabled && <Check size={12} className="text-primary-fg" />}
+                </div>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Section: Variants Management */}
+        {activeTab === 'variants' && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-muted uppercase">Configuration</h3>
+              <button 
+                type="button" 
+                onClick={addVariant}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-fg rounded-lg text-xs font-bold active:scale-95"
+              >
+                <Plus size={14} /> Add Variant
+              </button>
+            </div>
+
+            {variants.length === 0 ? (
+              <div className="py-12 text-center bg-surface-2 rounded-2xl border border-dashed border-border">
+                <p className="text-sm text-muted">No variants added yet</p>
+                <button type="button" onClick={addVariant} className="text-xs font-bold text-primary mt-2">Create first variant</button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {variants.map((v, i) => (
+                  <div key={i} className="p-4 bg-surface p-4 rounded-2xl border border-border relative">
+                    <button 
+                      type="button" 
+                      onClick={() => removeVariant(i)}
+                      className="absolute top-4 right-4 text-muted hover:text-red-500"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-muted uppercase mb-1">Storage</label>
+                        <select 
+                          value={v.storage}
+                          onChange={(e) => updateVariant(i, 'storage', e.target.value)}
+                          className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs outline-none"
+                        >
+                          {STORAGE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-muted uppercase mb-1">RAM</label>
+                        <select 
+                          value={v.ram}
+                          onChange={(e) => updateVariant(i, 'ram', e.target.value)}
+                          className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs outline-none"
+                        >
+                          {RAM_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-muted uppercase mb-1">Price (ETB)</label>
+                        <input 
+                          type="number"
+                          value={v.price || ''}
+                          onChange={(e) => updateVariant(i, 'price', parseFloat(e.target.value) || 0)}
+                          placeholder="0"
+                          className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-muted uppercase mb-1">Stock</label>
+                        <input 
+                          type="number"
+                          value={v.stock || ''}
+                          onChange={(e) => updateVariant(i, 'stock', parseInt(e.target.value) || 0)}
+                          placeholder="0"
+                          className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Basic Info */}
-          <div className="card-interactive p-4 space-y-4 cursor-default">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide">Basic Info</p>
-            
-            {/* Phone Brand Pill */}
-            {isPhone && !isEdit && (
-                <div>
-                  <label className="text-xs font-medium text-app-text mb-1.5 block">Brand</label>
-                  <div className="flex gap-2">
-                    {(['iPhone', 'Samsung'] as const).map((b) => (
-                      <button
-                        key={b}
-                        onClick={() => update('brand', b)}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                        style={form.brand === b ? { background: 'var(--primary)', color: 'var(--primary-foreground)' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                ))}
+              </div>
             )}
 
-            <div>
-              <label className="text-xs font-medium text-app-text mb-1.5 block">{isPhone ? 'Phone Type *' : 'Accessory Name *'}</label>
-              <input type="text" value={form.phoneType} onChange={(e) => update('phoneType', e.target.value)} placeholder={isPhone ? 'e.g. iPhone 15 Pro Max' : 'e.g. AirPods Pro'} className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none" />
-              {errors.phoneType && <p className="text-xs text-red-500 mt-1">{errors.phoneType}</p>}
+            <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+              <p className="text-[11px] text-blue-400 leading-relaxed">
+                <span className="font-bold">Tip:</span> Variants allow customers to choose their preferred storage size directly in the app. The "General Stock" and "General Price" will be automatically derived from these variants.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Section: Extra Specs */}
+        {activeTab === 'specs' && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+             <div>
+              <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Description / Notes</label>
+              <textarea 
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Details about scratches, repairs, or included accessories..."
+                rows={4}
+                className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm focus:border-primary outline-none resize-none"
+              />
             </div>
 
-            {/* Condition (Phone only) */}
-            {isPhone && (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-app-text mb-1.5 block">Condition *</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {CONDITIONS.map((c) => (
-                    <button key={c} onClick={() => update('condition', c)} className="p-2 border rounded-xl text-xs font-semibold" style={form.condition === c ? { border: '1px solid var(--primary)', background: 'rgba(245,196,0,0.12)', color: 'var(--primary)' } : { border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)' }}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-                {errors.condition && <p className="text-xs text-red-500 mt-1">{errors.condition}</p>}
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Battery Health</label>
+                <input 
+                  type="text"
+                  value={batteryHealth}
+                  onChange={(e) => setBatteryHealth(e.target.value)}
+                  placeholder="e.g. 92% or 100%"
+                  className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+                />
               </div>
-            )}
-            
-            {/* Accessory Price and Stock Fallbacks */}
-            {!isPhone && (
-                <>
-                <div>
-                    <label className="text-xs font-medium text-app-text mb-1.5 block">Price (ETB) *</label>
-                    <input type="text" value={form.priceText} onChange={(e) => update('priceText', formatPriceForInput(parsePriceInput(e.target.value) || 0))} placeholder="e.g. 5000" className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none" />
-                </div>
-                <div>
-                    <label className="text-xs font-medium text-app-text mb-1.5 block">Stock Quantity *</label>
-                    <input type="number" value={form.stockQuantity} onChange={(e) => update('stockQuantity', e.target.value)} placeholder="e.g. 10" className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none" />
-                </div>
-                </>
-            )}
-          </div>
-          
-          {/* Variant Builder (Phone only) */}
-          {isPhone && (
-              <div className="card-interactive p-4 space-y-4 cursor-default border-t border-[var(--border)]">
-                 <div className="flex justify-between items-center">
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wide">Pricing Variants</p>
-                    <button onClick={addVariant} className="text-primary text-xs font-bold flex items-center gap-1 active:scale-95"><Plus size={14}/> Add Setup</button>
-                 </div>
-                 <p className="text-[11px] text-muted -mt-2">Add a row for each storage & RAM capacity you have.</p>
-                 
-                 {errors.variants && <p className="text-xs text-red-500">{errors.variants}</p>}
-
-                 <div className="space-y-3">
-                    {form.variants.map((v, index) => (
-                        <div key={v.id} className="relative p-3 rounded-xl border border-[var(--border)] bg-surface-2 space-y-3">
-                            {form.variants.length > 1 && (
-                                <button onClick={() => removeVariant(index)} className="absolute top-2 right-2 text-red-400 p-1 active:scale-90"><Trash size={14}/></button>
-                            )}
-                            <div className="grid grid-cols-2 gap-2 pr-6">
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted mb-1 block">Storage</label>
-                                    <select value={v.storage} onChange={(e) => updateVariant(index, 'storage', e.target.value)} className="w-full bg-surface border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-app-text outline-none">
-                                        <option value="">Select...</option>
-                                        {PHONE_STORAGE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    </select>
-                                </div>
-                                {!isIphone && (
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-muted mb-1 block">RAM</label>
-                                        <select value={v.ram} onChange={(e) => updateVariant(index, 'ram', e.target.value)} className="w-full bg-surface border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-app-text outline-none">
-                                            <option value="">Select...</option>
-                                            {RAM_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 pr-6">
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted mb-1 block">Price (ETB) *</label>
-                                    <input type="text" value={v.priceText} onChange={(e) => updateVariant(index, 'priceText', formatPriceForInput(parsePriceInput(e.target.value) || 0))} placeholder="e.g. 65000" className="w-full bg-surface border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-app-text outline-none" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted mb-1 block">Stock *</label>
-                                    <input type="number" min="0" value={v.stockQuantity} onChange={(e) => updateVariant(index, 'stockQuantity', e.target.value)} className="w-full bg-surface border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-app-text outline-none" />
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                 </div>
-              </div>
-          )}
-          
-          {/* Brand Technical Specifics (Phone only) */}
-          {isPhone && (
-               <div className="card-interactive p-4 space-y-4 cursor-default">
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wide">Technical Specifics</p>
-                    
-                    {/* iPhone specific blocks */}
-                    {isIphone ? (
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs font-medium text-app-text mb-1.5 block">Battery Health</label>
-                                <input type="text" value={form.batteryHealth} onChange={(e) => update('batteryHealth', e.target.value)} placeholder="e.g. 86% or 100%" className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-app-text mb-1.5 block">Model Origin</label>
-                                <input type="text" value={form.modelOrigin} onChange={(e) => update('modelOrigin', e.target.value)} placeholder="e.g. LL/A or ZD/A" className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-app-text mb-1.5 block">SIM Type</label>
-                                <select value={form.simType} onChange={(e) => update('simType', e.target.value)} className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none">
-                                    <option value="">Select...</option>
-                                    <option value="Physical Dual SIM">Physical Dual SIM</option>
-                                    <option value="Physical + eSIM">Physical + eSIM</option>
-                                    <option value="eSIM Only">eSIM Only</option>
-                                </select>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs font-medium text-app-text mb-1.5 block">Network</label>
-                                <select value={form.network} onChange={(e) => update('network', e.target.value)} className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none">
-                                    <option value="">Select...</option>
-                                    <option value="5G">5G</option>
-                                    <option value="LTE">LTE</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-app-text mb-1.5 block">SIM Slot</label>
-                                <select value={form.simType} onChange={(e) => update('simType', e.target.value)} className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none">
-                                    <option value="">Select...</option>
-                                    <option value="Dual SIM">Dual SIM</option>
-                                    <option value="Single SIM">Single SIM</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
-               </div>
-          )}
-
-          {/* Exchange & Additional (Phone only) */}
-          {isPhone && (
-            <div className="card-interactive p-4 space-y-4 cursor-default">
               <div>
-                <p className="text-sm font-semibold text-app-text mb-2">Exchange Available</p>
-                <div className="flex rounded-xl border border-[var(--border)] bg-surface-2 p-1 gap-1">
-                  <button onClick={() => update('exchangeEnabled', false)} className="flex-1 py-2 rounded-xl text-sm font-bold transition-all" style={!form.exchangeEnabled ? { background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' } : { color: 'var(--muted)' }}>
-                    Exchange OFF
-                  </button>
-                  <button onClick={() => update('exchangeEnabled', true)} className="flex-1 py-2 rounded-xl text-sm font-bold transition-all" style={form.exchangeEnabled ? { background: 'var(--primary)', color: 'var(--primary-foreground)' } : { color: 'var(--muted)' }}>
-                    Exchange ON
-                  </button>
-                </div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Screen Size</label>
+                <input 
+                  type="text"
+                  value={screenSize}
+                  onChange={(e) => setScreenSize(e.target.value)}
+                  placeholder='e.g. 6.7"'
+                  className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Color</label>
+                <input 
+                  type="text"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  placeholder="e.g. Natural Titanium"
+                  className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">SIM Type</label>
+                <select 
+                  value={simType}
+                  onChange={(e) => setSimType(e.target.value)}
+                  className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm outline-none"
+                >
+                  <option value="Physical SIM">Physical SIM</option>
+                  <option value="eSIM Only">eSIM Only</option>
+                  <option value="Physical + eSIM">Physical + eSIM</option>
+                  <option value="Dual Physical SIM">Dual Physical SIM</option>
+                </select>
               </div>
             </div>
-          )}
-
-          <div className="card-interactive p-4 cursor-default">
-            <label className="text-xs font-semibold text-muted uppercase tracking-wide mb-1 block">Description</label>
-            <textarea value={form.description} onChange={(e) => update('description', e.target.value)} placeholder="e.g. Comes with original box and charger." rows={3} className="w-full bg-surface-2 border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-app-text outline-none resize-none" />
           </div>
+        )}
 
-          {saveError && <div className="bg-red-950/50 border border-red-500/40 rounded-xl px-4 py-3 text-sm text-red-400 font-medium">{saveError}</div>}
-
-          <button onClick={handleSave} disabled={saving} className="w-full py-4 font-semibold btn-interactive rounded-xl shadow-sm disabled:opacity-50" style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : `Add ${form.type === 'phone' ? 'Phone' : 'Accessory'}`}
+        {/* Footer sticky button */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg border-t border-border flex gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/inventory')}
+            className="flex-1 py-3.5 px-4 rounded-xl border border-border text-muted font-bold active:scale-95 transition-transform"
+          >
+            Cancel
           </button>
-          
-          {isEdit && (
-            <div className="mt-4">
-               {existingProduct?.archivedAt ? (
-                  <button onClick={handleRestore} disabled={saving} className="w-full flex items-center justify-center py-3 rounded-xl border border-green-500 text-green-400 font-semibold text-sm">
-                    Restore Product
-                  </button>
-               ) : (
-                  <button onClick={handleArchive} disabled={saving} className="w-full flex items-center justify-center py-3 rounded-xl border border-red-500/60 text-red-400 font-semibold text-sm">
-                    Archive Product
-                  </button>
-               )}
+          <button
+            type="submit"
+            disabled={loading || !phoneType}
+            className="flex-[2] py-3.5 px-4 rounded-xl bg-primary text-primary-fg font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
+            {isEditing ? 'Save Changes' : 'Create Product'}
+          </button>
+        </div>
+      </form>
+
+      {/* Quick Select Modal */}
+      {showQuickSelect && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-0">
+          <div className="w-full max-w-lg bg-surface rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold">Quick Select Model</h2>
+              <button onClick={() => setShowQuickSelect(false)} className="p-2 text-muted">
+                <X size={20} />
+              </button>
             </div>
-          )}
-      </div>
+
+            <div className="flex gap-2 mb-4">
+              {MODEL_PRESETS.map((preset, idx) => (
+                <button
+                  key={preset.label}
+                  onClick={() => setQuickSelectBrand(idx)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-all ${quickSelectBrand === idx ? 'bg-primary border-primary text-primary-fg' : 'bg-surface-2 border-border text-muted'}`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto pr-2">
+              {MODEL_PRESETS[quickSelectBrand].models.map(model => (
+                <button
+                  key={model}
+                  type="button"
+                  onClick={() => selectPresetModel(model)}
+                  className="px-4 py-3 rounded-xl border border-border text-xs font-semibold text-left active:bg-primary active:text-primary-fg transition-colors"
+                >
+                  {model}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowQuickSelect(false)}
+              className="w-full mt-6 py-4 rounded-xl font-bold bg-surface-2 text-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

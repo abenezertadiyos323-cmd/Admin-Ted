@@ -1,44 +1,53 @@
-// Telegram WebApp helper
-
-export const tg = window.Telegram?.WebApp;
-
-export function getTelegramUser() {
-  if (tg?.initDataUnsafe?.user) {
-    return tg.initDataUnsafe.user;
+declare global {
+  interface Window {
+    Telegram: {
+      WebApp: any;
+    };
   }
-  // Stub for development outside Telegram
+}
+
+export const initTelegram = () => {
+  if (window.Telegram?.WebApp) {
+    const webapp = window.Telegram.WebApp;
+    webapp.ready();
+    webapp.expand();
+    // Enable swipe-to-close if available
+    if (webapp.enableClosingConfirmation) {
+      webapp.enableClosingConfirmation();
+    }
+  }
+};
+
+export const getTelegramInitData = () => {
+  return window.Telegram?.WebApp?.initData || "";
+};
+
+export const getTelegramUser = () => {
+  if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+    return window.Telegram.WebApp.initDataUnsafe.user;
+  }
+  // Mock user for local development
   return {
-    id: 123456789,
-    first_name: 'Bena',
-    last_name: 'Admin',
-    username: 'bena_admin',
-    language_code: 'en',
+    id: 12345678,
+    first_name: "Admin",
+    last_name: "Mock",
+    username: "admin_mock",
+    photo_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
   };
-}
+};
 
-export function getTelegramInitData() {
-  return tg?.initData || "";
-}
+export const closeTelegram = () => {
+  window.Telegram?.WebApp?.close();
+};
 
-export function initTelegram() {
-  if (tg) {
-    tg.ready();
-    tg.expand();
-  }
-}
+export const showAlert = (message: string) => {
+  window.Telegram?.WebApp?.showAlert(message);
+};
 
-export function hapticLight() {
-  tg?.HapticFeedback?.impactOccurred('light');
-}
+export const showConfirm = (message: string, callback: (ok: boolean) => void) => {
+  window.Telegram?.WebApp?.showConfirm(message, callback);
+};
 
-export function hapticMedium() {
-  tg?.HapticFeedback?.impactOccurred('medium');
-}
-
-export function hapticSuccess() {
-  tg?.HapticFeedback?.notificationOccurred('success');
-}
-
-export function hapticError() {
-  tg?.HapticFeedback?.notificationOccurred('error');
-}
+export const setHeaderColor = (color: string) => {
+  window.Telegram?.WebApp?.setHeaderColor(color);
+};

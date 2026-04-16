@@ -1,52 +1,31 @@
-import type { CSSProperties } from 'react';
-
-interface BadgeProps {
-  /** Raw count value. Badge is hidden when count === 0. */
-  count: number;
-  /** When true, plays the badge-pop keyframe animation. */
-  pop?: boolean;
-  /** Extra inline styles (e.g. absolute positioning from the parent). */
-  style?: CSSProperties;
-  /** Extra class names for positioning / spacing. */
-  className?: string;
-}
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 /**
- * Unified notification badge.
- *
- * Design rules:
- *   background : var(--badge)  — #FF2D55 red, always
- *   text       : white
- *   ring       : 1.5px solid var(--bg) so it reads cleanly on dark surfaces
- *   animation  : badge-pop keyframe (defined in index.css) when pop=true
+ * Shared badge logic that pops when its value changes.
+ * Used for Inbox and Exchanges in the bottom nav.
  */
-export function Badge({ count, pop = false, style, className = '' }: BadgeProps) {
-  if (count === 0) return null;
+export default function Badge({ 
+  type, 
+  className = "" 
+}: { 
+  type: 'inbox' | 'exchanges';
+  className?: string;
+}) {
+  const count = useQuery(
+    type === 'inbox' 
+      ? api.threads.getUnreadCount 
+      : api.exchanges.getPendingCount
+  );
 
-  const label        = count >= 100 ? '99+' : String(count);
-  const isMultiDigit = count >= 10;
+  if (!count || count <= 0) return null;
 
   return (
-    <span
-      // Re-keying on each pop ensures the CSS animation restarts cleanly
-      // even if the browser hasn't fully flushed the previous run.
-      key={pop ? 'pop' : 'idle'}
-      className={`inline-flex items-center justify-center font-bold text-white rounded-full ${
-        pop ? 'animate-badge-pop' : ''
-      } ${className}`.trim()}
-      style={{
-        background:  'var(--badge)',
-        border:      '1.5px solid var(--bg)',
-        boxShadow:   '0 1px 4px rgba(0,0,0,0.5)',
-        fontSize:    '10px',
-        lineHeight:  1,
-        height:      '18px',
-        minWidth:    isMultiDigit ? 'auto' : '18px',
-        padding:     isMultiDigit ? '0 5px' : '0',
-        ...style,
-      }}
+    <span 
+      key={count} // Re-mount or re-animate when count changes
+      className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-badge text-[10px] font-black text-white flex items-center justify-center animate-badge-pop shadow-sm z-10 ${className}`}
     >
-      {label}
+      {count > 99 ? '99+' : count}
     </span>
   );
 }

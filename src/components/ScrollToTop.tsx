@@ -1,29 +1,29 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
+/**
+ * Utility component that resets scroll position to top
+ * on every route transition. Ensures deep pages don't 
+ * stay scrolled down when moving between inbox, inventory, etc.
+ */
 export default function ScrollToTop() {
-  const { pathname, search } = useLocation();
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    // Always reset window scroll
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    // Immediate scroll on route change
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant'
+    });
 
-    // Reset common inner scroll containers if the app uses them
-    const containers = [
-      document.querySelector("[data-scroll-container='true']"),
-      document.querySelector(".scroll-container"),
-      document.querySelector(".page-scroll"),
-      document.querySelector("main"),
-      document.querySelector("#root"),
-    ].filter(Boolean) as HTMLElement[];
-
-    for (const el of containers) {
-      try {
-        el.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
-        el.scrollTop = 0;
-      } catch {}
-    }
-  }, [pathname, search]);
+    // Telegram might maintain its own viewport scroll, force body top too
+    document.body.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant'
+    });
+  }, [pathname]);
 
   return null;
 }

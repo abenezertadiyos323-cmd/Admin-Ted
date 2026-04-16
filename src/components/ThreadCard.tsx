@@ -1,95 +1,75 @@
-import type { Thread } from '../types';
-import { formatRelativeTime, getCustomerName, truncate } from '../lib/utils';
-import { Badge } from './Badge';
-import { useBadgePop } from '../hooks/useBadgePop';
+import { Circle, User, CheckCircle2, ChevronRight } from 'lucide-react';
 
-interface ThreadCardProps {
-  thread: Thread;
-  onClick: () => void;
-}
+export default function ThreadCard({ 
+  thread, 
+  onClick 
+}: { 
+  thread: any; 
+  onClick: () => void 
+}) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'new': return 'var(--primary)';
+      case 'seen': return '#3B82F6';
+      case 'done': return '#10B981';
+      default: return 'var(--muted)';
+    }
+  };
 
-// Avatar palette — vivid enough to read against dark surface
-const AVATAR_COLORS = [
-  '#2563EB', // blue-600
-  '#7C3AED', // violet-600
-  '#059669', // emerald-600
-  '#D97706', // amber-600
-  '#DC2626', // red-600
-  '#0891B2', // cyan-600
-];
-
-export default function ThreadCard({ thread, onClick }: ThreadCardProps) {
-  const isUnread = thread.unreadCount > 0;
-  const fullName = getCustomerName(thread.customerFirstName, thread.customerLastName);
-  const initials = fullName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
-  const avatarBg = AVATAR_COLORS[fullName.charCodeAt(0) % AVATAR_COLORS.length];
-
-  // Pop animation — fires when unreadCount increases for this specific thread
-  const { shouldPop } = useBadgePop(thread.unreadCount);
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'new': return <Circle size={10} fill="var(--primary)" />;
+      case 'seen': return <Circle size={10} fill="#3B82F6" />;
+      case 'done': return <CheckCircle2 size={10} className="text-green-500" />;
+      default: return null;
+    }
+  };
 
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 active:opacity-70"
-      style={{
-        background: 'var(--surface)',
-        borderBottom: '1px solid var(--border)',
-      }}
+      className="w-full text-left bg-surface border border-border rounded-2xl p-4 active:scale-[0.98] transition-all flex items-start gap-4 relative"
     >
       {/* Avatar */}
-      <div
-        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm"
-        style={{ background: avatarBg }}
-      >
-        {initials}
+      <div className="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center flex-shrink-0 border border-border">
+        {thread.customerUsername ? (
+          <span className="text-lg font-bold text-primary">{thread.customerFirstName.charAt(0)}</span>
+        ) : (
+          <User size={24} className="text-muted" />
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <span
-            className="text-sm"
-            style={{
-              fontWeight: isUnread ? 700 : 500,
-              color: 'var(--text)',
-            }}
-          >
-            {fullName}
-          </span>
-          <span className="text-[11px] flex-shrink-0 ml-2" style={{ color: 'var(--muted)' }}>
-            {formatRelativeTime(thread.lastMessageAt)}
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-sm font-bold text-text truncate">
+            {thread.customerFirstName} {thread.customerLastName || ''}
+          </h3>
+          <span className="text-[10px] text-muted flex-shrink-0">
+             {new Date(thread.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
+        
+        <p className="text-xs text-muted line-clamp-1 mb-2 pr-4">
+          {thread.lastMessagePreview || 'No messages'}
+        </p>
 
-        <div className="flex items-center justify-between">
-          <p
-            className="text-xs truncate flex-1"
-            style={{
-              color: isUnread ? 'var(--text)' : 'var(--muted)',
-              fontWeight: isUnread ? 500 : 400,
-            }}
-          >
-            {thread.lastMessagePreview
-              ? truncate(thread.lastMessagePreview, 50)
-              : 'No messages yet'}
-          </p>
-
-          {/* Unread badge with pop animation */}
-          {isUnread && (
-            <Badge
-              count={thread.unreadCount}
-              pop={shouldPop}
-              className="ml-2 flex-shrink-0"
-            />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2 border border-border">
+            {getStatusIcon(thread.status)}
+            <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: getStatusColor(thread.status) }}>
+              {thread.status}
+            </span>
+          </div>
+          {thread.unreadCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-badge text-[9px] font-black text-white">
+              {thread.unreadCount} NEW
+            </span>
           )}
         </div>
       </div>
+
+      <ChevronRight size={16} className="text-border absolute right-4 top-1/2 -translate-y-1/2" />
     </button>
   );
 }

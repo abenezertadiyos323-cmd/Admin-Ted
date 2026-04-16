@@ -690,8 +690,8 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>Good day,</p>
-              <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{user.first_name} 👋</h1>
+              <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>Good day</p>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>TedyTech 👋</h1>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -798,34 +798,32 @@ export default function Dashboard() {
             >
               {activeAlerts.length === 0 ? (
                 <p className="text-center text-sm py-8" style={{ color: 'var(--muted)' }}>
-                  ✅ Nothing needs attention
+                  All clear! No urgent issues.
                 </p>
               ) : (
                 <>
-                  {visibleAlerts.map((alert, idx) => (
-                    <div
-                      key={idx}
-                      style={
-                        idx < visibleAlerts.length - 1 || hasMore
-                          ? { borderBottom: '1px solid var(--border)' }
-                          : {}
-                      }
-                    >
+                  <div className="divide-y divide-[var(--border)]">
+                    {visibleAlerts.map((alert, idx) => (
                       <AlertItem
+                        key={idx}
                         emoji={alert.emoji}
                         text={alert.text}
                         onClick={alert.to ? () => navigate(alert.to!) : undefined}
                       />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                   {hasMore && (
                     <button
                       type="button"
                       onClick={() => setShowAllAlerts(true)}
-                      className="w-full py-3 text-xs font-medium text-center active:opacity-70 transition-opacity"
-                      style={{ color: 'var(--primary)' }}
+                      className="w-full py-3 text-xs font-bold uppercase tracking-wider active:bg-surface-2 transition-colors"
+                      style={{
+                        color: 'var(--primary)',
+                        borderTop: '1px solid var(--border)',
+                        background: 'rgba(245,196,0,0.03)',
+                      }}
                     >
-                      Show {activeAlerts.length - PREVIEW} more
+                      Show {activeAlerts.length - PREVIEW} more alerts
                     </button>
                   )}
                 </>
@@ -835,9 +833,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {showRestock && (
-        <RestockModal data={demand.restockData} onClose={() => setShowRestock(false)} />
-      )}
+      {showRestock && <RestockModal data={demand.restockSuggestions} onClose={() => setShowRestock(false)} />}
       {showContentPlan && (
         <ContentPlanModal
           topPhoneTypes={demand.topPhoneTypes}
@@ -845,9 +841,7 @@ export default function Dashboard() {
           onClose={() => setShowContentPlan(false)}
         />
       )}
-      {showAffiliates && affiliatesData && (
-        <AffiliatesModal data={affiliatesData} onClose={() => setShowAffiliates(false)} />
-      )}
+      {showAffiliates && <AffiliatesModal data={affiliatesData} onClose={() => setShowAffiliates(false)} />}
     </>
   );
 }

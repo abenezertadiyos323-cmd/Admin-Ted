@@ -4,7 +4,7 @@ import { api } from "../../convex/_generated/api";
 import { getTelegramInitData } from "../lib/telegram";
 import { Lock } from "lucide-react";
 
-/** Pure-CSS splash that renders instantly — no image files needed */
+/** Pure-CSS splash that renders instantly â€” no image files needed */
 function SplashScreen() {
   return (
     <div
@@ -16,7 +16,8 @@ function SplashScreen() {
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
-        background: "var(--bg)",
+        background:
+          "radial-gradient(circle at top, rgba(245,196,0,0.18), transparent 34%), radial-gradient(circle at bottom right, rgba(59,130,246,0.18), transparent 30%), linear-gradient(180deg, #0b0f1a 0%, #090d16 100%)",
       }}
     >
       {/* Warm gold and cool blue glow for the opening screen */}
@@ -33,7 +34,29 @@ function SplashScreen() {
           pointerEvents: "none",
         }}
       />
-      
+      <div
+        style={{
+          position: "absolute",
+          width: 240,
+          height: 240,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(59,130,246,0.16) 0%, transparent 70%)",
+          filter: "blur(110px)",
+          bottom: "18%",
+          right: "10%",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "auto 16px 16px 16px",
+          height: 1,
+          background: "linear-gradient(90deg, transparent, rgba(245,196,0,0.25), transparent)",
+          pointerEvents: "none",
+        }}
+      />
+
       {/* Brand text */}
       <div
         style={{
@@ -59,7 +82,7 @@ function SplashScreen() {
             fontFamily: '"Inter", system-ui, sans-serif',
           }}
         >
-          Tedy
+          TEDY
         </span>
         <span
           style={{
@@ -71,7 +94,7 @@ function SplashScreen() {
             fontFamily: '"Inter", system-ui, sans-serif',
           }}
         >
-          Tech
+          TECH
         </span>
       </div>
 

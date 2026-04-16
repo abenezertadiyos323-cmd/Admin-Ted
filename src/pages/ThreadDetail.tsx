@@ -1,92 +1,91 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Send, ArrowLeftRight, ChevronLeft } from 'lucide-react';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
-import { getTelegramUser } from '../lib/telegram';
-import { formatTime, formatDate, getCustomerName, formatETB } from '../lib/utils';
-import type { Message, Exchange } from '../types';
-
-// Avatar palette — same as ThreadCard for consistency
-const AVATAR_COLORS = [
-  '#2563EB',
-  '#7C3AED',
-  '#059669',
-  '#D97706',
-  '#DC2626',
-  '#0891B2',
-];
-
-function getExchangeStatusDark(status: string): { background: string; color: string } {
-  switch (status) {
-    case 'Pending':   return { background: 'rgba(59,130,246,0.15)',  color: '#60A5FA' };
-    case 'Quoted':    return { background: 'rgba(139,92,246,0.15)',  color: '#A78BFA' };
-    case 'Accepted':  return { background: 'rgba(245,196,0,0.15)',   color: '#F5C400' };
-    case 'Completed': return { background: 'rgba(16,185,129,0.15)',  color: '#34D399' };
-    case 'Rejected':  return { background: 'rgba(239,68,68,0.15)',   color: '#F87171' };
-    default:          return { background: 'rgba(148,163,184,0.12)', color: '#94A3B8' };
-  }
-}
-
-function getThreadStatusDark(status: string): { background: string; color: string } {
-  switch (status) {
-    case 'new':  return { background: 'rgba(59,130,246,0.15)',  color: '#60A5FA' };
-    case 'seen': return { background: 'rgba(148,163,184,0.12)', color: '#94A3B8' };
-    default:     return { background: 'rgba(16,185,129,0.15)',  color: '#34D399' };
-  }
-}
+import { 
+  Send, 
+  ChevronLeft, 
+  MoreVertical, 
+  Check, 
+  CheckCheck,
+  Package,
+  ArrowRight,
+  Circle,
+  Clock,
+  User,
+  Loader2,
+  Trash2,
+  AlertCircle
+} from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function ThreadDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [text, setText] = useState('');
-  const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const user = getTelegramUser();
+  const [reply, setReply] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const thread = useQuery(api.threads.getThread, id ? { threadId: id as Id<'threads'> } : 'skip');
-  const messages = useQuery(api.threads.listThreadMessages, id ? { threadId: id as Id<'threads'> } : 'skip') ?? [];
-  const exchanges = (useQuery(api.exchanges.listExchangesByThread, id ? { threadId: id as Id<'threads'> } : 'skip') ?? []) as Exchange[];
+  const thread = useQuery(api.threads.getThreadById, {
+    threadId: id as Id<'threads'>,
+  });
+  const messages = useQuery(api.messages.listMessages, {
+    threadId: id as Id<'threads'>,
+  });
 
-  const createAdminMessage = useMutation(api.messages.createAdminMessage);
-  const markSeenMutation = useMutation(api.threads.markThreadSeen);
+  const sendAdminMessage = useMutation(api.messages.sendAdminMessage);
+  const updateThreadStatus = useMutation(api.threads.updateThreadStatus);
+  const markAsRead = useMutation(api.threads.markAsRead);
 
-  const markedSeen = useRef(false);
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (!markedSeen.current && thread && thread.status === 'new') {
-      markedSeen.current = true;
-      markSeenMutation({ threadId: thread._id });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [thread]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!text.trim() || !id || sending) return;
-    setSending(true);
-    await createAdminMessage({
-      threadId: id as Id<'threads'>,
-      adminTelegramId: String(user.id),
-      text: text.trim(),
-    });
-    setText('');
-    setSending(false);
-  };
+  // Mark as read when entering
+  useEffect(() => {
+    if (id) {
+      markAsRead({ threadId: id as Id<'threads'> });
+    }
+  }, [id, markAsRead]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!reply.trim() || isSending || !id) return;
+
+    setIsSending(true);
+    try {
+      await sendAdminMessage({
+        threadId: id as Id<'threads'>,
+        text: reply.trim(),
+        adminName: 'Admin', // In a real app, this would be the actual admin name
+      });
+      setReply('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSending(false);
     }
   };
 
-  if (thread === undefined) {
+  const handleStatusChange = async (status: 'seen' | 'done') => {
+    if (!id) return;
+    try {
+      await updateThreadStatus({
+        threadId: id as Id<'threads'>,
+        status,
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (thread === undefined || messages === undefined) {
     return (
-      <div className="flex items-center justify-center h-screen" style={{ background: 'var(--bg)' }}>
+      <div className="flex items-center justify-center h-screen bg-bg">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -94,191 +93,124 @@ export default function ThreadDetail() {
 
   if (!thread) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-3" style={{ background: 'var(--bg)' }}>
-        <p style={{ color: 'var(--muted)' }}>Thread not found</p>
-        <button onClick={() => navigate(-1)} className="text-sm" style={{ color: 'var(--primary)' }}>Go back</button>
+      <div className="flex flex-col items-center justify-center h-screen bg-bg p-6 text-center">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h1 className="text-xl font-bold mb-2">Conversation not found</h1>
+        <button 
+          onClick={() => navigate('/inbox')}
+          className="text-primary font-bold"
+        >
+          Back to Inbox
+        </button>
       </div>
     );
   }
 
-  const customerName = getCustomerName(thread.customerFirstName, thread.customerLastName);
-  const initials = customerName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
-  const avatarBg = AVATAR_COLORS[customerName.charCodeAt(0) % AVATAR_COLORS.length];
-  const threadStatusStyle = getThreadStatusDark(thread.status);
-
-  // Group messages by date
-  const grouped: { date: string; messages: Message[] }[] = [];
-  messages.forEach((msg) => {
-    const dateStr = formatDate(msg.createdAt);
-    const last = grouped[grouped.length - 1];
-    if (last && last.date === dateStr) {
-      last.messages.push(msg);
-    } else {
-      grouped.push({ date: dateStr, messages: [msg] });
-    }
-  });
-
   return (
-    <div
-      className="flex flex-col"
-      style={{
-        background: 'var(--bg)',
-        height: 'calc(100vh - 64px - env(safe-area-inset-bottom, 0px))',
-      }}
-    >
+    <div className="flex flex-col h-screen bg-bg">
       {/* Header */}
-      <div
-        className="flex items-center gap-3 px-3 py-3 flex-shrink-0"
-        style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
-      >
-        <button
-          onClick={() => navigate(-1)}
-          className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
-          style={{ color: 'var(--muted)' }}
-        >
-          <ChevronLeft size={22} />
-        </button>
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-          style={{ background: avatarBg }}
-        >
-          {initials}
+      <header className="px-4 py-3 bg-surface border-b border-border flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/inbox')} className="p-1 -ml-2 text-muted active:scale-90 transition-transform">
+            <ChevronLeft size={24} />
+          </button>
+          <div>
+            <h1 className="text-sm font-bold leading-none mb-1">
+              {thread.customerFirstName} {thread.customerLastName || ''}
+            </h1>
+            <p className="text-[10px] text-muted font-mono leading-none">
+              @{thread.customerUsername || 'no-username'}
+            </p>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold truncate" style={{ color: 'var(--text)' }}>{customerName}</p>
-          {thread.customerUsername && (
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>@{thread.customerUsername}</p>
+        
+        <div className="flex items-center gap-2">
+          {thread.status !== 'done' ? (
+            <button 
+              onClick={() => handleStatusChange('done')}
+              className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-[10px] font-black uppercase tracking-wider active:scale-95 transition-transform"
+            >
+              Close
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-border opacity-60">
+              <CheckCircle size={12} className="text-green-500" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-muted">Archived</span>
+            </div>
           )}
         </div>
-        <span
-          className="text-[11px] font-semibold px-2 py-1 rounded-full"
-          style={threadStatusStyle}
-        >
-          {thread.status.charAt(0).toUpperCase() + thread.status.slice(1)}
-        </span>
-      </div>
-
-      {/* Exchange Cards (pinned) */}
-      {exchanges.length > 0 && (
-        <div
-          className="px-3 py-2 space-y-2 flex-shrink-0"
-          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
-        >
-          {exchanges.map((ex) => {
-            const exStatusStyle = getExchangeStatusDark(ex.status);
-            return (
-              <button
-                key={ex._id}
-                onClick={() => navigate(`/exchanges/${ex._id}`)}
-                className="w-full flex items-center gap-3 rounded-xl p-3 text-left transition-all duration-150 active:scale-[0.99]"
-                style={{ background: 'rgba(245,196,0,0.06)', border: '1px solid rgba(245,196,0,0.12)' }}
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(245,196,0,0.12)', color: 'var(--primary)' }}
-                >
-                  <ArrowLeftRight size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate" style={{ color: 'var(--text)' }}>
-                    {ex.tradeInBrand} {ex.tradeInModel} → {ex.desiredPhone?.phoneType ?? 'Unknown'}
-                  </p>
-                  <p className="text-[11px]" style={{ color: 'var(--muted)' }}>
-                    Pay {formatETB(ex.finalDifference)}
-                  </p>
-                </div>
-                <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
-                  style={exStatusStyle}
-                >
-                  {ex.status}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-        {grouped.map(({ date, messages: msgs }) => (
-          <div key={date}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-              <span className="text-[11px] font-medium px-2" style={{ color: 'var(--muted)' }}>{date}</span>
-              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
+      >
+        <div className="text-center py-6">
+          <p className="text-[10px] uppercase font-black tracking-widest text-muted/40">
+            Conversation Started {new Date(thread.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+
+        {messages.map((msg, idx) => {
+          const isMe = msg.sender === 'admin';
+          const isBot = msg.senderRole === 'bot';
+          
+          return (
+            <div 
+              key={msg._id} 
+              className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+            >
+              <div 
+                className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm relative ${
+                  isMe 
+                    ? 'bg-primary text-primary-fg rounded-tr-none' 
+                    : isBot
+                    ? 'bg-surface-2 border border-blue-500/20 text-text rounded-tl-none'
+                    : 'bg-surface border border-border text-text rounded-tl-none'
+                }`}
+              >
+                {isBot && (
+                  <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter mb-1 select-none">Automated Reply</p>
+                )}
+                <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <span className={`text-[9px] opacity-60 font-mono ${isMe ? 'text-primary-fg' : 'text-muted'}`}>
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {isMe && <CheckCheck size={10} className="text-primary-fg/60" />}
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              {msgs.map((msg) => {
-                const isAdmin = msg.sender === 'admin';
-                return (
-                  <div
-                    key={msg._id}
-                    className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-xl px-3.5 py-2.5 ${isAdmin ? 'rounded-br-sm' : 'rounded-bl-sm'}`}
-                      style={isAdmin
-                        ? { background: 'rgba(245,196,0,0.18)', border: '1px solid rgba(245,196,0,0.25)' }
-                        : { background: 'var(--surface-2)', border: '1px solid var(--border)' }
-                      }
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text)' }}>
-                        {msg.text}
-                      </p>
-                      <p
-                        className="text-[10px] mt-1 text-right"
-                        style={{ color: isAdmin ? 'rgba(245,196,0,0.55)' : 'var(--muted)' }}
-                      >
-                        {formatTime(msg.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        <div ref={bottomRef} />
+          );
+        })}
       </div>
 
       {/* Input */}
-      {thread.status !== 'done' ? (
-        <div
-          className="px-3 py-3 flex items-end gap-2 flex-shrink-0"
-          style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)' }}
-        >
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
+      <div className="p-4 bg-surface border-t border-border pb-safe">
+        <form onSubmit={handleSendMessage} className="flex gap-2">
+          <input 
+            type="text"
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            disabled={isSending}
             placeholder="Type a message..."
-            rows={1}
-            className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none resize-none max-h-32 overflow-y-auto"
-            style={{
-              background: 'var(--surface-2)',
-              color: 'var(--text)',
-              border: '1px solid var(--border)',
-              minHeight: '42px',
-            }}
+            className="flex-1 bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors disabled:opacity-50"
           />
-          <button
-            onClick={handleSend}
-            disabled={!text.trim() || sending}
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 btn-interactive disabled:opacity-40"
-            style={{ background: 'var(--primary)' }}
+          <button 
+            type="submit"
+            disabled={!reply.trim() || isSending}
+            className="w-12 h-12 bg-primary text-primary-fg rounded-xl flex items-center justify-center active:scale-90 transition-all disabled:opacity-50"
           >
-            <Send size={16} style={{ color: 'var(--primary-foreground)' }} />
+            {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </button>
-        </div>
-      ) : (
-        <div
-          className="px-4 py-3 text-center flex-shrink-0"
-          style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)' }}
-        >
-          <p className="text-xs" style={{ color: 'var(--muted)' }}>This thread is closed. Customer can reopen by sending a message.</p>
-        </div>
-      )}
+        </form>
+      </div>
     </div>
   );
 }
+
+function CheckCircle({ size, className }: { size: number; className?: string }) {
+  return <CheckCircle2 size={size} className={className} />;
+}
+import { CheckCircle2 } from 'lucide-react';

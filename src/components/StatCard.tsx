@@ -1,55 +1,37 @@
 import type { ReactNode } from 'react';
 
-interface StatCardProps {
-  title: string;
-  value: number | string;
-  icon: ReactNode;
-  iconBg: string;
-  onClick?: () => void;
-  badge?: string;
-  badgeColor?: string; // kept for API compat but ignored — always uses var(--badge)
-}
-
 export default function StatCard({
   title,
   value,
+  subtitle,
   icon,
-  iconBg,
-  onClick,
-  badge,
-}: StatCardProps) {
+  trend,
+}: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon?: ReactNode;
+  trend?: { value: string; positive: boolean };
+}) {
   return (
-    <button
-      onClick={onClick}
-      className={`rounded-xl p-4 flex items-center gap-3 w-full text-left transition-all duration-150 active:scale-[0.99] ${
-        onClick ? 'cursor-pointer' : 'cursor-default'
-      }`}
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-      }}
-    >
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-        {icon}
+    <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
+      <div className="flex items-start justify-between mb-2">
+        <div className="text-muted">{icon}</div>
+        {trend && (
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+              trend.positive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+            }`}
+          >
+            {trend.value}
+          </span>
+        )}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate" style={{ color: 'var(--muted)' }}>{title}</p>
-        <div className="flex items-center gap-2">
-          <p className="text-2xl font-bold" style={{ color: 'var(--text)' }}>{value}</p>
-          {badge && (
-            <span
-              className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full"
-              style={{
-                background: 'var(--badge)',
-                border: '1px solid var(--bg)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
-              }}
-            >
-              {badge}
-            </span>
-          )}
-        </div>
+      <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-1">{title}</p>
+      <div className="flex items-baseline gap-1">
+        <span className="text-xl font-black text-text">{value}</span>
+        {subtitle && <span className="text-[10px] text-muted font-medium">{subtitle}</span>}
       </div>
-    </button>
+    </div>
   );
 }

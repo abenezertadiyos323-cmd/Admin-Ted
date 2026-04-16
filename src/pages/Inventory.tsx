@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
 import type { Product, ProductType, Condition } from '../types';
+import { PHONE_STORAGE_FILTER_OPTIONS } from '../lib/storageOptions';
 import { getSearchHistory, addToSearchHistory, clearSearchHistory } from '../utils/searchHistory';
 
 type InventoryTab = 'all' | 'inStock' | 'lowStock' | 'outOfStock' | 'exchangeEnabled' | 'archived';
@@ -39,7 +40,6 @@ const CONDITIONS: { value: Condition; label: string }[] = [
   { value: 'Poor', label: 'Poor' },
 ];
 
-const STORAGE_OPTIONS = [64, 128, 256, 512] as const;
 const RAM_OPTIONS = [4, 6, 8, 12] as const;
 
 type SortOption = 'newest' | 'priceLow' | 'priceHigh' | 'stockLow';
@@ -279,7 +279,7 @@ function InventoryContent() {
       setIsSearching(false); // Debounce fired; query loading takes over the indicator
       setCommittedQ(searchQuery);
     }, 300);
-  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Enter key: bypass debounce and trigger immediately
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -808,126 +808,120 @@ function InventoryContent() {
               {/* Price Range */}
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Price Range (ETB)</p>
-                <div className="flex items-center gap-3">
+                <div className="flex gap-3 items-center">
                   <input
                     type="number"
-                    placeholder="Min ETB"
+                    placeholder="Min"
                     value={draftFilters.priceMin ?? ''}
-                    onChange={(e) =>
-                      setDraftFilters((prev) => ({
-                        ...prev,
-                        priceMin: e.target.value ? Number(e.target.value) : undefined,
-                      }))
-                    }
-                    className="flex-1 rounded-xl px-3 py-2 text-sm outline-none transition-colors"
+                    onChange={(e) => setDraftFilters(prev => ({ ...prev, priceMin: e.target.value ? Number(e.target.value) : undefined }))}
+                    className="flex-1 rounded-xl px-3 py-2 text-sm outline-none"
                     style={inputStyle}
                   />
-                  <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>–</span>
+                  <span style={{ color: 'var(--muted)' }}>—</span>
                   <input
                     type="number"
-                    placeholder="Max ETB"
+                    placeholder="Max"
                     value={draftFilters.priceMax ?? ''}
-                    onChange={(e) =>
-                      setDraftFilters((prev) => ({
-                        ...prev,
-                        priceMax: e.target.value ? Number(e.target.value) : undefined,
-                      }))
-                    }
-                    className="flex-1 rounded-xl px-3 py-2 text-sm outline-none transition-colors"
+                    onChange={(e) => setDraftFilters(prev => ({ ...prev, priceMax: e.target.value ? Number(e.target.value) : undefined }))}
+                    className="flex-1 rounded-xl px-3 py-2 text-sm outline-none"
                     style={inputStyle}
                   />
                 </div>
-                <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>Leave empty to ignore price filtering.</p>
               </div>
 
-              {/* Storage */}
+              {/* Specific for Phone type */}
+              {activeType === 'phone' && (
+                <>
+                  {/* Storage */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Storage</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {PHONE_STORAGE_FILTER_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() =>
+                            setDraftFilters((prev) => ({
+                              ...prev,
+                              storageGb: prev.storageGb === opt.value ? undefined : opt.value,
+                            }))
+                          }
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                          style={draftFilters.storageGb === opt.value
+                            ? { background: 'var(--primary)', color: 'var(--primary-foreground)' }
+                            : { background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)' }
+                          }
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* RAM */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>RAM</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {RAM_OPTIONS.map((rama) => (
+                        <button
+                          key={rama}
+                          type="button"
+                          onClick={() =>
+                            setDraftFilters((prev) => ({
+                              ...prev,
+                              ramGb: prev.ramGb === rama ? undefined : rama,
+                            }))
+                          }
+                          className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all"
+                          style={draftFilters.ramGb === rama
+                            ? { background: 'var(--primary)', color: 'var(--primary-foreground)' }
+                            : { background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)' }
+                          }
+                        >
+                          {rama}GB
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Extras */}
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Storage</p>
-                <select
-                  value={draftFilters.storageGb ?? ''}
-                  onChange={(e) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      storageGb: e.target.value ? Number(e.target.value) : undefined,
-                    }))
-                  }
-                  className="w-full rounded-xl px-3 py-2 text-sm outline-none transition-colors appearance-none"
-                  style={inputStyle}
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Extras</p>
+                <button
+                  type="button"
+                  onClick={() => setDraftFilters(prev => ({ ...prev, hasImages: !prev.hasImages }))}
+                  className="w-full flex items-center justify-between p-3 rounded-xl text-sm"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                 >
-                  <option value="">Any</option>
-                  {STORAGE_OPTIONS.map((gb) => (
-                    <option key={gb} value={gb}>
-                      {gb} GB
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* RAM */}
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>RAM</p>
-                <select
-                  value={draftFilters.ramGb ?? ''}
-                  onChange={(e) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      ramGb: e.target.value ? Number(e.target.value) : undefined,
-                    }))
-                  }
-                  className="w-full rounded-xl px-3 py-2 text-sm outline-none transition-colors appearance-none"
-                  style={inputStyle}
-                >
-                  <option value="">Any</option>
-                  {RAM_OPTIONS.map((gb) => (
-                    <option key={gb} value={gb}>
-                      {gb} GB
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Has Images */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Only show products with images</p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDraftFilters((prev) => ({
-                        ...prev,
-                        hasImages: prev.hasImages ? undefined : true,
-                      }))
-                    }
-                    className="relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-3"
-                    style={{ background: draftFilters.hasImages ? 'var(--primary)' : 'var(--surface-2)' }}
+                  <span style={{ color: 'var(--text)' }}>Has images only</span>
+                  <div
+                    className={`w-9 h-5 rounded-full relative transition-colors ${draftFilters.hasImages ? 'bg-primary' : 'bg-muted/20'}`}
                   >
-                    <span
-                      className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        draftFilters.hasImages ? 'translate-x-7' : 'translate-x-1'
-                      }`}
+                    <div
+                      className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${draftFilters.hasImages ? 'right-1' : 'left-1'}`}
                     />
-                  </button>
-                </div>
-                <p className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>Turn on to hide products without photos.</p>
+                  </div>
+                </button>
               </div>
 
             </div>
 
-            {/* Footer buttons */}
-            <div className="flex gap-3 px-5 pt-4">
+            {/* Footer */}
+            <div className="flex gap-3 px-5 pt-3 pb-1">
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="flex-1 py-3 rounded-xl font-semibold text-sm active:scale-95 transition-transform"
-                style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}
+                className="flex-1 py-3 text-sm font-semibold active:opacity-70 transition-opacity"
+                style={{ color: 'var(--muted)' }}
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={handleApplyFilters}
-                className="flex-1 py-3 rounded-xl font-semibold text-sm active:scale-95 transition-transform"
-                style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                className="flex-[2] py-3 rounded-xl bg-primary text-primary-fg text-sm font-bold active:scale-95 transition-transform"
               >
                 Apply Filters
               </button>
@@ -941,16 +935,7 @@ function InventoryContent() {
 
 export default function Inventory() {
   return (
-    <ErrorBoundary
-      onError={(error) => {
-        console.error('[Inventory] local error boundary caught an error', error);
-      }}
-      fallbackRender={({ error }) => (
-        <InventoryErrorFallback
-          error={error instanceof Error ? error : new Error(String(error))}
-        />
-      )}
-    >
+    <ErrorBoundary FallbackComponent={InventoryErrorFallback}>
       <InventoryContent />
     </ErrorBoundary>
   );

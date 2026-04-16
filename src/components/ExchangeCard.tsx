@@ -1,121 +1,63 @@
-import { ArrowRight } from 'lucide-react';
 import type { Exchange } from '../types';
-import { formatETB, formatRelativeTime, getCustomerName } from '../lib/utils';
+import { ArrowRightLeft, Clock, Phone, Smartphone, ChevronRight } from 'lucide-react';
 
-interface ExchangeCardProps {
-  exchange: Exchange;
-  onClick: () => void;
-}
-
-// Dark-theme status badge styles — semantic colors that pop on dark surfaces
-function getStatusStyle(status: string): { bg: string; color: string } {
-  switch (status) {
-    case 'Pending':   return { bg: 'rgba(59,130,246,0.15)',  color: '#60A5FA' };  // blue
-    case 'Quoted':    return { bg: 'rgba(139,92,246,0.15)',  color: '#A78BFA' };  // violet
-    case 'Accepted':  return { bg: 'rgba(245,196,0,0.15)',   color: '#F5C400' };  // primary yellow
-    case 'Completed': return { bg: 'rgba(16,185,129,0.15)',  color: '#34D399' };  // green
-    case 'Rejected':  return { bg: 'rgba(239,68,68,0.15)',   color: '#F87171' };  // red
-    default:          return { bg: 'rgba(148,163,184,0.12)', color: '#94A3B8' };  // muted
-  }
-}
-
-export default function ExchangeCard({ exchange, onClick }: ExchangeCardProps) {
-  const statusStyle = getStatusStyle(exchange.status);
-  const customerName = exchange.thread
-    ? getCustomerName(exchange.thread.customerFirstName, exchange.thread.customerLastName)
-    : 'Unknown';
+export default function ExchangeCard({ 
+  exchange, 
+  onClick 
+}: { 
+  exchange: any; 
+  onClick?: () => void 
+}) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Pending': return 'var(--primary)';
+      case 'Quoted': return '#3B82F6';
+      case 'Accepted': return '#F59E0B';
+      case 'Completed': return '#10B981';
+      case 'Rejected': return '#EF4444';
+      default: return 'var(--muted)';
+    }
+  };
 
   return (
     <button
       onClick={onClick}
-      className="card-interactive p-4 w-full text-left"
+      className="w-full text-left bg-surface border border-border rounded-2xl p-4 active:scale-[0.98] transition-all flex flex-col gap-3 relative"
     >
-      {/* Header: avatar + name + status badge */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"
-            style={{ background: 'var(--surface-2)', color: 'var(--primary)' }}
-          >
-            {customerName.charAt(0).toUpperCase()}
-          </div>
-          <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-            {customerName}
-          </span>
-        </div>
-        <span
-          className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-          style={{ background: statusStyle.bg, color: statusStyle.color }}
-        >
-          {exchange.status}
-        </span>
-      </div>
-
-      {/* Trade-in → Desired */}
-      <div className="flex items-center gap-2 mb-3">
-        <div
-          className="flex-1 rounded-xl p-2.5"
-          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-        >
-          <p className="text-[10px] font-medium mb-0.5" style={{ color: 'var(--muted)' }}>TRADE-IN</p>
-          <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--text)' }}>
-            {exchange.tradeInBrand} {exchange.tradeInModel}
-          </p>
-          <p className="text-[10px]" style={{ color: 'var(--muted)' }}>
-            {exchange.tradeInStorage} · {exchange.tradeInCondition}
-          </p>
-        </div>
-        <ArrowRight size={16} className="flex-shrink-0" style={{ color: 'var(--muted)' }} />
-        <div
-          className="flex-1 rounded-xl p-2.5"
-          style={{ background: 'rgba(245,196,0,0.06)', border: '1px solid rgba(245,196,0,0.15)' }}
-        >
-          <p className="text-[10px] font-medium mb-0.5" style={{ color: 'var(--primary)' }}>WANTS</p>
-          <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--text)' }}>
-            {exchange.desiredPhone
-              ? exchange.desiredPhone.phoneType
-              : 'Unknown Phone'}
-          </p>
-          {exchange.desiredPhone?.storage && (
-            <p className="text-[10px]" style={{ color: 'var(--muted)' }}>
-              {exchange.desiredPhone.storage}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Price Breakdown */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div>
-            <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Trade-in Value</p>
-            <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
-              {formatETB(exchange.finalTradeInValue)}
-            </p>
+          <div className="w-9 h-9 rounded-xl bg-surface-2 flex items-center justify-center text-primary border border-border">
+            <Phone size={18} />
           </div>
           <div>
-            <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Customer Pays</p>
-            <p className="text-xs font-bold" style={{ color: 'var(--primary)' }}>
-              {formatETB(exchange.finalDifference)}
+            <h3 className="text-sm font-bold text-text">
+              {exchange.tradeInBrand} {exchange.tradeInModel}
+            </h3>
+            <p className="text-[10px] text-muted font-black uppercase tracking-wider">
+              {exchange.tradeInStorage} · {exchange.tradeInCondition}
             </p>
           </div>
         </div>
-        <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
-          {formatRelativeTime(exchange.createdAt)}
-        </span>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-muted font-medium mb-1">
+            {new Date(exchange.createdAt).toLocaleDateString()}
+          </span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2 border border-border">
+            <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: getStatusColor(exchange.status) }}>
+              {exchange.status}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Budget flag */}
-      {exchange.budgetMentionedInSubmission && (
-        <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-          <span
-            className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(217,119,6,0.15)', color: '#FBBF24' }}
-          >
-            💬 Budget mentioned
-          </span>
-        </div>
-      )}
+      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+        <ArrowRightLeft size={12} className="text-muted" />
+        <p className="text-[10px] text-muted truncate">
+          Requesting: <span className="font-bold text-text">iPhone 15 Pro (128GB)</span>
+        </p>
+      </div>
+
+      <ChevronRight size={16} className="text-border absolute right-4 bottom-4" />
     </button>
   );
 }

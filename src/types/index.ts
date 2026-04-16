@@ -1,64 +1,41 @@
-// ============================================================
-// TedyTech Admin Mini App — TypeScript Types (DATA V2)
-// ============================================================
-
-// ---- Enums ----
+import type { Id } from '../../convex/_generated/dataModel';
 
 export type ProductType = 'phone' | 'accessory';
 
 export type Condition = 'New' | 'Like New' | 'Excellent' | 'Good' | 'Fair' | 'Poor';
 
-export type ThreadStatus = 'new' | 'seen' | 'done';
-
-export type MessageSender = 'customer' | 'admin';
-
-export type ExchangeStatus =
-  | 'Pending'
-  | 'Quoted'
-  | 'Accepted'
-  | 'Completed'
-  | 'Rejected';
-
-export type InventoryReason =
-  | 'Exchange completed'
-  | 'Manual adjustment'
-  | 'Product created'
-  | 'Product restored from archive';
-
-export type ThreadCategory = 'hot' | 'warm' | 'cold';
-
-// ---- Product Image ----
-
-export type ProductImage = string;
-
-// ---- Admin ----
-
-export interface Admin {
-  _id: string;
-  telegramId: string;
-  firstName: string;
-  lastName?: string;
-  username?: string;
-  isActive: boolean;
-  addedAt: number;
-  addedBy?: string;
+export interface Variant {
+  storage: string;
+  ram?: string;
+  price: number;
+  stock: number;
 }
 
-// ---- Product ----
-
 export interface Product {
-  _id: string;
+  _id: Id<'products'>;
+  _creationTime: number;
   type: ProductType;
-  phoneType: string;
+  phoneType?: string;
+  brand?: string;
+  model?: string;
   ram?: string;
   storage?: string;
-  storageOptions?: string[];
   condition?: Condition;
   price: number;
   stockQuantity: number;
   exchangeEnabled: boolean;
   description?: string;
-  images: ProductImage[];
+  images: string[];
+  isArchived: boolean;
+  archivedAt?: number;
+  createdAt: number;
+  createdBy: string;
+  updatedAt: number;
+  updatedBy: string;
+  sellerId: string;
+  batteryHealth?: string;
+  modelOrigin?: string;
+  network?: string;
   screenSize?: string;
   battery?: string;
   mainCamera?: string;
@@ -67,192 +44,51 @@ export interface Product {
   color?: string;
   operatingSystem?: string;
   features?: string;
-  archivedAt?: number;
-  createdAt: number;
-  createdBy: string;
-  updatedAt: number;
-  updatedBy: string;
+  variants?: Variant[];
 }
 
-// ---- Thread ----
-
 export interface Thread {
-  _id: string;
+  _id: Id<'threads'>;
+  _creationTime: number;
   telegramId: string;
   customerFirstName: string;
   customerLastName?: string;
   customerUsername?: string;
-  status: ThreadStatus;
+  status: 'new' | 'seen' | 'done';
   unreadCount: number;
   lastMessageAt: number;
   lastMessagePreview?: string;
-  lastCustomerMessageAt?: number;
-  lastAdminMessageAt?: number;
-  hasCustomerMessaged: boolean;
-  hasAdminReplied: boolean;
-  lastCustomerMessageHasBudgetKeyword: boolean;
   createdAt: number;
   updatedAt: number;
-  // Derived
-  category?: ThreadCategory;
 }
 
-// ---- Message ----
-
 export interface Message {
-  _id: string;
-  threadId: string;
-  sender: MessageSender;
+  _id: Id<'messages'>;
+  _creationTime: number;
+  threadId: Id<'threads'>;
+  sender: 'customer' | 'admin';
+  senderRole?: 'customer' | 'admin' | 'bot';
   senderTelegramId: string;
   text: string;
-  exchangeId?: string;
   createdAt: number;
 }
 
-// ---- Exchange ----
-
 export interface Exchange {
-  _id: string;
+  _id: Id<'exchanges'>;
+  _creationTime: number;
   telegramId: string;
-  threadId: string;
-  desiredPhoneId: string;
+  threadId: Id<'threads'>;
+  desiredPhoneId: Id<'products'>;
   tradeInBrand: string;
   tradeInModel: string;
   tradeInStorage: string;
   tradeInRam: string;
   tradeInCondition: Condition;
-  tradeInImei?: string;
-  customerNotes?: string;
-  budgetMentionedInSubmission: boolean;
-  desiredPhonePrice: number;
+  status: 'Pending' | 'Quoted' | 'Accepted' | 'Completed' | 'Rejected';
   calculatedTradeInValue: number;
   calculatedDifference: number;
-  adminOverrideTradeInValue?: number;
-  adminOverrideDifference?: number;
   finalTradeInValue: number;
   finalDifference: number;
-  priorityValueETB: number;
-  status: ExchangeStatus;
-  clickedContinue: boolean;
-  quotedAt?: number;
-  quotedBy?: string;
-  quoteMessageId?: string;
   createdAt: number;
   updatedAt: number;
-  completedAt?: number;
-  completedBy?: string;
-  rejectedAt?: number;
-  rejectedBy?: string;
-  // Derived
-  category?: ThreadCategory;
-  // Joined
-  desiredPhone?: Product;
-  thread?: Thread;
-}
-
-// ---- Inventory Event ----
-
-export interface InventoryEvent {
-  _id: string;
-  productId: string;
-  oldQty: number;
-  newQty: number;
-  editedBy: string;
-  reason: InventoryReason;
-  exchangeId?: string;
-  timestamp: number;
-}
-
-// ---- Dashboard Stats ----
-
-export interface DashboardStats {
-  newExchangesToday: number;
-  newMessagesToday: number;
-  openThreads: number;
-  lowStockCount: number;
-}
-
-// ---- Recent Activity ----
-
-export type ActivityType =
-  | 'exchange_submitted'
-  | 'exchange_quoted'
-  | 'exchange_accepted'
-  | 'exchange_completed'
-  | 'exchange_rejected'
-  | 'message_sent'
-  | 'stock_changed'
-  | 'thread_closed'
-  | 'product_added'
-  | 'product_archived';
-
-export interface RecentActivity {
-  id: string;
-  type: ActivityType;
-  title: string;
-  subtitle: string;
-  timestamp: number;
-}
-
-// ---- Telegram WebApp ----
-
-export interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-}
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        initData: string;
-        initDataUnsafe: {
-          user?: TelegramUser;
-          start_param?: string;
-        };
-        version: string;
-        platform: string;
-        colorScheme: 'light' | 'dark';
-        themeParams: {
-          bg_color?: string;
-          text_color?: string;
-          hint_color?: string;
-          link_color?: string;
-          button_color?: string;
-          button_text_color?: string;
-          secondary_bg_color?: string;
-        };
-        isExpanded: boolean;
-        viewportHeight: number;
-        viewportStableHeight: number;
-        ready: () => void;
-        expand: () => void;
-        close: () => void;
-        MainButton: {
-          text: string;
-          color: string;
-          textColor: string;
-          isVisible: boolean;
-          isActive: boolean;
-          show: () => void;
-          hide: () => void;
-          onClick: (callback: () => void) => void;
-        };
-        BackButton: {
-          isVisible: boolean;
-          show: () => void;
-          hide: () => void;
-          onClick: (callback: () => void) => void;
-        };
-        HapticFeedback: {
-          impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
-          notificationOccurred: (type: 'error' | 'success' | 'warning') => void;
-          selectionChanged: () => void;
-        };
-      };
-    };
-  }
 }

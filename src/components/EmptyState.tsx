@@ -1,33 +1,33 @@
 import type { ReactNode } from 'react';
 
-interface EmptyStateProps {
-  icon: ReactNode;
-  title: string;
-  subtitle?: string;
-  action?: ReactNode;
-}
-
-export default function EmptyState({ icon, title, subtitle, action }: EmptyStateProps) {
+export default function EmptyState({ 
+  icon, 
+  title, 
+  subtitle 
+}: { 
+  icon: ReactNode; 
+  title: string; 
+  subtitle: string;
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div
-        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: 'var(--surface-2)', color: 'var(--muted)' }}
+    <div className="flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in duration-300">
+      <div 
+        className="w-20 h-20 rounded-3xl bg-surface-2 border border-border flex items-center justify-center mb-6 text-muted shadow-sm"
       >
         {icon}
       </div>
-      <h3
-        className="text-base font-semibold mb-1"
+      <h3 
+        className="text-lg font-bold mb-2 tracking-tight" 
         style={{ color: 'var(--text)' }}
       >
         {title}
       </h3>
-      {subtitle && (
-        <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
-          {subtitle}
-        </p>
-      )}
-      {action && <div>{action}</div>}
+      <p 
+        className="text-sm font-medium leading-relaxed max-w-[240px]" 
+        style={{ color: 'var(--muted)' }}
+      >
+        {subtitle}
+      </p>
     </div>
   );
 }

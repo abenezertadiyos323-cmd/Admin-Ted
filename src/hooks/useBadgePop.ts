@@ -1,52 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
- * Fires a brief "pop" flag when `currentCount` increases.
- *
- * Rules:
- * - undefined is treated as 0 but does NOT initialise the baseline — we wait
- *   for the first real server value so the initial data-load never triggers pop.
- * - Once we have a baseline, any increase sets shouldPop=true for POP_MS, then
- *   resets to false automatically.
- * - A plain re-render that doesn't change `currentCount` never re-triggers the
- *   effect (deps array: [currentCount]).
+ * useBadgePop.ts
+ * Returns a boolean that flips to true briefly when the input value changes.
+ * Used to trigger the 'animate-badge-pop' CSS animation in the UI.
  */
-
-const POP_MS = 220;
-
-export function useBadgePop(currentCount: number | undefined): { shouldPop: boolean } {
-  // null = "not yet seen a real server value"
-  const prevRef  = useRef<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+export function useBadgePop(value: number | undefined) {
   const [shouldPop, setShouldPop] = useState(false);
+  const [prevValue, setPrevValue] = useState(value);
 
   useEffect(() => {
-    // Still loading — skip; we don't want to animate the first data arrival
-    if (currentCount === undefined) return;
-
-    if (prevRef.current === null) {
-      // First real value: establish baseline, no animation
-      prevRef.current = currentCount;
-      return;
-    }
-
-    if (currentCount > prevRef.current) {
-      // Count went up — fire pop
+    // Only pop if the value actually INCREASED (new messages/exchanges)
+    if (value !== undefined && prevValue !== undefined && value > prevValue) {
       setShouldPop(true);
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
+      
+      // Reset after animation finishes (matches CSS duration 220ms)
+      const timer = setTimeout(() => {
         setShouldPop(false);
-        timerRef.current = null;
-      }, POP_MS);
+      }, 250);
+
+      return () => clearTimeout(timer);
     }
+    
+    setPrevValue(value);
+  }, [value, prevValue]);
 
-    prevRef.current = currentCount;
-  }, [currentCount]); // only re-runs when the count actually changes
-
-  // Clean up on unmount
-  useEffect(() => () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  }, []);
-
-  return { shouldPop };
+  return shouldPop;
 }

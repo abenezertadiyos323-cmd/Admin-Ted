@@ -1,137 +1,165 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import TabBar from '../components/TabBar';
-import ThreadCard from '../components/ThreadCard';
+import { 
+  MessageSquare, 
+  Search, 
+  Clock, 
+  CheckCircle2, 
+  Circle,
+  AlertCircle,
+  ChevronRight,
+  User,
+  Filter
+} from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
-import { classifyCategory } from '../lib/utils';
-import type { Thread, ThreadCategory } from '../types';
+import PageHeader from '../components/PageHeader';
 
-const TABS: { key: ThreadCategory | 'all'; label: string; emoji: string }[] = [
-  { key: 'hot', label: 'Hot', emoji: '🔥' },
-  { key: 'warm', label: 'Warm', emoji: '☀️' },
-  { key: 'cold', label: 'Cold', emoji: '🧊' },
-];
-
-const EMPTY_MESSAGES: Record<string, { title: string; subtitle: string }> = {
-  hot: { title: 'No hot threads', subtitle: 'Hot threads appear when customers message recently or mention budget' },
-  warm: { title: 'No warm threads', subtitle: 'Warm threads appear when customers are engaged' },
-  cold: { title: 'No cold threads', subtitle: 'Cold threads appear when exchanges are inactive for 24+ hours' },
-  all: { title: 'No threads yet', subtitle: 'Customer conversations will appear here' },
-};
+type InboxFilter = 'all' | 'unread' | 'waiting' | 'done';
 
 export default function Inbox() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const filterParam = searchParams.get('filter');
+  const [filter, setFilter] = useState<InboxFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const FILTER_LABELS: Record<string, string> = {
-    waiting30:    'Waiting >30 min',
-    followUp:     'Follow Up',
-    unanswered:   'Unanswered today',
-    firstContact: 'First contact',
-  };
-  const filterLabel = filterParam ? (FILTER_LABELS[filterParam] ?? filterParam) : null;
+  const threads = useQuery(api.threads.listThreads);
 
-  const [activeTab, setActiveTab] = useState<ThreadCategory | 'all'>('hot');
+  const filteredThreads = useMemo(() => {
+    if (!threads) return [];
+    
+    return threads.filter(thread => {
+      // Apply status filter
+      if (filter === 'unread' && thread.status !== 'new') return false;
+      if (filter === 'waiting' && thread.status === 'done') return false;
+      if (filter === 'done' && thread.status !== 'done') return false;
 
-  const didApplyFilter = useRef(false);
-  useEffect(() => {
-    if (filterParam && !didApplyFilter.current) {
-      didApplyFilter.current = true;
-      setActiveTab('all');
+      // Apply search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const name = `${thread.customerFirstName} ${thread.customerLastName || ''}`.toLowerCase();
+        const username = (thread.customerUsername || '').toLowerCase();
+        return name.includes(query) || username.includes(query);
+      }
+
+      return true;
+    });
+  }, [threads, filter, searchQuery]);
+
+  if (threads === undefined) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-bg">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'new': return 'var(--primary)';
+      case 'seen': return '#3B82F6';
+      case 'done': return '#10B981';
+      default: return 'var(--muted)';
     }
-  }, [filterParam]);
+  };
 
-  const rawThreads = useQuery(api.threads.listThreads, {});
-
-  const threadsWithCategory = useMemo(() => {
-    if (!rawThreads) return [] as Thread[];
-    return rawThreads.map((t) => ({
-      ...t,
-      category: classifyCategory({
-        createdAt: t.createdAt,
-        lastCustomerMessageAt: t.lastCustomerMessageAt,
-        lastCustomerMessageHasBudgetKeyword: t.lastCustomerMessageHasBudgetKeyword,
-        hasCustomerMessaged: t.hasCustomerMessaged,
-        hasAdminReplied: t.hasAdminReplied,
-      }),
-    })) as Thread[];
-  }, [rawThreads]);
-
-  const loading = rawThreads === undefined;
-
-  const counts = useMemo(() => ({
-    hot: threadsWithCategory.filter((t) => t.category === 'hot').length,
-    warm: threadsWithCategory.filter((t) => t.category === 'warm').length,
-    cold: threadsWithCategory.filter((t) => t.category === 'cold').length,
-  }), [threadsWithCategory]);
-
-  const threads = useMemo(() =>
-    activeTab === 'all'
-      ? threadsWithCategory
-      : threadsWithCategory.filter((t) => t.category === activeTab),
-  [threadsWithCategory, activeTab]);
-
-  const tabs = TABS.map((t) => ({
-    ...t,
-    count: (counts as Record<string, number>)[t.key] ?? 0,
-  }));
-
-  const empty = EMPTY_MESSAGES[activeTab];
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'new': return <Circle size={12} fill="var(--primary)" />;
+      case 'seen': return <Circle size={12} fill="#3B82F6" />;
+      case 'done': return <CheckCircle2 size={12} className="text-green-500" />;
+      default: return null;
+    }
+  };
 
   return (
-    <div style={{ background: 'var(--bg)' }}>
-      {/* Title — NOT sticky, scrolls away */}
-      <div className="px-4 pt-4 pb-3" style={{ background: 'var(--surface)' }}>
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Inbox</h1>
-        {filterLabel && (
-          <div
-            className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-          >
-            <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
-              Filtering: {filterLabel}
-            </span>
-          </div>
-        )}
+    <div className="min-h-screen bg-bg">
+      <PageHeader title="Inbox" />
+
+      {/* Search & Filters */}
+      <div className="px-4 py-2 bg-surface sticky top-0 z-20 border-b border-border">
+        <div className="relative mb-3">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input 
+            type="text"
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-surface-2 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary transition-colors"
+          />
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {(['all', 'unread', 'waiting', 'done'] as InboxFilter[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold capitalize transition-all ${filter === f ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-muted border border-border'}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Tabs row — sticky */}
-      <div
-        className="sticky top-0 z-20"
-        style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
-      >
-        <TabBar
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={(key) => {
-            setActiveTab(key as ThreadCategory | 'all');
-          }}
-        />
-      </div>
-
-      {/* Thread list */}
-      <div className="pb-20 mt-2 rounded-t-2xl" style={{ background: 'var(--surface)' }}>
-        {loading ? (
-          <LoadingSpinner className="py-16" />
-        ) : threads.length === 0 ? (
-          <EmptyState
-            icon={<MessageCircle size={28} />}
-            title={empty.title}
-            subtitle={empty.subtitle}
+      {/* Threads List */}
+      <div className="p-4">
+        {filteredThreads.length === 0 ? (
+          <EmptyState 
+            icon={<MessageSquare size={48} />}
+            title="No conversations found"
+            subtitle={searchQuery ? "Try a different search term" : "Your inbox is clear"}
           />
         ) : (
-          <div>
-            {threads.map((thread) => (
-              <ThreadCard
+          <div className="space-y-3">
+            {filteredThreads.map((thread) => (
+              <button
                 key={thread._id}
-                thread={thread}
                 onClick={() => navigate(`/inbox/${thread._id}`)}
-              />
+                className="w-full text-left bg-surface border border-border rounded-2xl p-4 active:scale-[0.98] transition-all flex items-start gap-4 relative"
+              >
+                {/* Avatar / Icon */}
+                <div className="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center flex-shrink-0 border border-border">
+                  {thread.customerUsername ? (
+                    <span className="text-lg font-bold text-primary">{thread.customerFirstName.charAt(0)}</span>
+                  ) : (
+                    <User size={24} className="text-muted" />
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-bold text-text truncate">
+                      {thread.customerFirstName} {thread.customerLastName || ''}
+                    </h3>
+                    <span className="text-[10px] text-muted flex-shrink-0">
+                      {new Date(thread.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  
+                  <p className="text-xs text-muted line-clamp-2 mb-2 pr-4">
+                    {thread.lastMessagePreview || 'No messages yet'}
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2 border border-border">
+                      {getStatusIcon(thread.status)}
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: getStatusColor(thread.status) }}>
+                        {thread.status}
+                      </span>
+                    </div>
+                    {thread.unreadCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-primary text-primary-fg text-[10px] font-black">
+                        {thread.unreadCount} NEW
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <ChevronRight size={16} className="text-border absolute right-4 top-1/2 -translate-y-1/2" />
+              </button>
             ))}
           </div>
         )}

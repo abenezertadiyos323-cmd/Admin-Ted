@@ -1,50 +1,43 @@
-const KEY = 'inv_search_history';
-const MAX_ENTRIES = 10;
+/**
+ * searchHistory.ts
+ * Manages the local storage for the inventory search bar history.
+ */
 
-function safeParseStringArray(value: string | null): string[] {
-  if (!value) return [];
+const HISTORY_KEY = 'admin_search_history';
+const MAX_HISTORY = 8;
+
+export const getSearchHistory = (): string[] => {
   try {
-    const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
-}
+};
 
-function canUseLocalStorage(): boolean {
-  try {
-    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-  } catch {
-    return false;
-  }
-}
+export const addToSearchHistory = (term: string) => {
+  if (!term || term.trim().length <= 1) return;
+  
+  const history = getSearchHistory();
+  const normalized = term.trim();
+  
+  // Remove existing occurrence of the same term (case-insensitive)
+  const filtered = history.filter(h => h.toLowerCase() !== normalized.toLowerCase());
+  
+  // Prepend new term and limit size
+  const newHistory = [normalized, ...filtered].slice(0, MAX_HISTORY);
+  
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+};
 
-export function getSearchHistory(): string[] {
-  if (!canUseLocalStorage()) return [];
-  try {
-    return safeParseStringArray(localStorage.getItem(KEY));
-  } catch {
-    return [];
-  }
-}
+export const clearSearchHistory = () => {
+  localStorage.removeItem(HISTORY_KEY);
+};
 
-export function addToSearchHistory(query: string): void {
-  const q = query.trim();
-  if (q.length < 2) return;
-  if (!canUseLocalStorage()) return;
-  try {
-    const prev = getSearchHistory().filter((h) => h.toLowerCase() !== q.toLowerCase());
-    localStorage.setItem(KEY, JSON.stringify([q, ...prev].slice(0, MAX_ENTRIES)));
-  } catch {
-    // localStorage unavailable (private mode, quota exceeded) — silently ignore
-  }
-}
-
-export function clearSearchHistory(): void {
-  if (!canUseLocalStorage()) return;
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    // silently ignore
-  }
-}
+export const removeFromSearchHistory = (term: string) => {
+  const history = getSearchHistory();
+  const newHistory = history.filter(h => h !== term);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+};

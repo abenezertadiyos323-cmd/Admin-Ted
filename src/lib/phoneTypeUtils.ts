@@ -1,36 +1,53 @@
 /**
- * Normalize phoneType: trim whitespace, collapse multiple spaces, preserve casing
+ * phoneTypeUtils.ts
+ * Logic for extracting brand and model from phoneType strings.
  */
-export function normalizePhoneType(input: string): string {
-  return input.trim().replace(/\s+/g, ' ');
+
+const BRANDS = ['iPhone', 'Samsung', 'Google', 'Xiaomi', 'Oppo', 'Vivo', 'Realme'];
+
+/**
+ * Extracts the brand from a phoneType string.
+ * Example: "iPhone 15 Pro" -> "iPhone"
+ */
+export function extractBrand(phoneType: string): string {
+  if (!phoneType) return 'Other';
+  
+  const normalized = phoneType.toLowerCase();
+  for (const brand of BRANDS) {
+    if (normalized.includes(brand.toLowerCase())) {
+      return brand;
+    }
+  }
+  
+  return 'Other';
 }
 
 /**
- * Validate phoneType: required, min 3 chars, max 80 chars, allowed characters, must have alphanumeric
+ * Extracts the model name from a phoneType string by removing the brand.
+ * Example: "iPhone 15 Pro" -> "15 Pro"
  */
-export function validatePhoneType(input: string): { valid: boolean; error?: string } {
-  const normalized = normalizePhoneType(input);
+export function extractModel(phoneType: string): string {
+  if (!phoneType) return '';
+  
+  const brand = extractBrand(phoneType);
+  if (brand === 'Other') return phoneType;
+  
+  // Remove brand name (case insensitive) and trim
+  const regex = new RegExp(brand, 'i');
+  return phoneType.replace(regex, '').trim();
+}
 
-  if (!normalized) {
-    return { valid: false, error: 'Phone type is required' };
-  }
+/**
+ * Normalizes a phoneType for comparison.
+ */
+export function normalizePhoneType(phoneType: string): string {
+  return (phoneType || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
 
-  if (normalized.length < 3) {
-    return { valid: false, error: 'Phone type must be at least 3 characters' };
-  }
-
-  if (normalized.length > 80) {
-    return { valid: false, error: 'Phone type must not exceed 80 characters' };
-  }
-
-  const allowedCharsRegex = /^[A-Za-z0-9+\-/() ]+$/;
-  if (!allowedCharsRegex.test(normalized)) {
-    return { valid: false, error: 'Phone type contains invalid characters' };
-  }
-
-  if (!/[A-Za-z0-9]/.test(normalized)) {
-    return { valid: false, error: 'Phone type must contain at least one letter or number' };
-  }
-
-  return { valid: true };
+/**
+ * Checks if a phoneType belongs to a specific brand.
+ */
+export function isBrand(phoneType: string, brand: string): boolean {
+  if (!phoneType) return false;
+  return phoneType.toLowerCase().includes(brand.toLowerCase());
 }

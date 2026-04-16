@@ -1,87 +1,78 @@
-import { Lock } from 'lucide-react';
 import type { Product } from '../types';
-import { formatETB } from '../lib/utils';
+import { Package, Smartphone, CheckCircle, Clock } from 'lucide-react';
 
-interface ProductCardProps {
-  product: Product;
-  onClick: () => void;
-}
+export default function ProductCard({ 
+  product, 
+  onClick 
+}: { 
+  product: Product; 
+  onClick?: () => void 
+}) {
+  // Derive status badge
+  const isOutOfStock = product.stockQuantity <= 0;
+  const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= 2;
 
-function getStockStyleDark(qty: number): { background: string; color: string } {
-  if (qty === 0) return { background: 'rgba(239,68,68,0.15)', color: '#F87171' };
-  if (qty <= 2) return { background: 'rgba(245,158,11,0.15)', color: '#FCD34D' };
-  return { background: 'rgba(16,185,129,0.15)', color: '#34D399' };
-}
-
-export default function ProductCard({ product, onClick }: ProductCardProps) {
-  const stockQuantity = typeof product.stockQuantity === 'number' ? product.stockQuantity : 0;
-  const images = Array.isArray(product.images) ? product.images : [];
-  const imageUrl = images[0];
-  const phoneType = typeof product.phoneType === 'string' && product.phoneType.trim().length > 0
-    ? product.phoneType
-    : 'Unnamed product';
-  const storage = typeof product.storage === 'string' && product.storage.trim().length > 0
-    ? product.storage
-    : undefined;
-  const priceLabel = typeof product.price === 'number' ? formatETB(product.price) : 'N/A';
-  const stockStyle = getStockStyleDark(stockQuantity);
+  // Use the storage URL from the backend normalizer
+  const mainImage = product.images?.[0] || '';
+  const imageUrl = mainImage.startsWith('http') 
+    ? mainImage 
+    : mainImage 
+      ? `https://fastidious-schnauzer-265.convex.cloud/api/storage/${mainImage}`
+      : '';
 
   return (
     <button
       onClick={onClick}
-      className="card-interactive p-3 flex items-center gap-3 w-full text-left"
+      className={`w-full text-left bg-surface border border-border rounded-2xl p-3 flex gap-4 active:scale-[0.98] transition-all relative overflow-hidden ${product.isArchived ? 'opacity-60 grayscale-[0.4]' : ''}`}
     >
-      {/* Image */}
-      <div
-        className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0"
-        style={{ background: 'var(--surface-2)' }}
-      >
+      {/* Status Overlay for Archive */}
+      {product.isArchived && (
+        <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/50 backdrop-blur-md rounded-lg z-10">
+          <span className="text-[9px] font-black text-white/80 uppercase">Archived</span>
+        </div>
+      )}
+
+      {/* Image / Icon container */}
+      <div className="w-16 h-16 rounded-xl bg-surface-2 border border-border flex items-center justify-center flex-shrink-0 overflow-hidden">
         {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={phoneType}
-            className="w-full h-full object-cover"
-          />
+          <img src={imageUrl} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>
-            No img
-          </div>
+          product.type === 'phone' ? <Smartphone size={24} className="text-muted" /> : <Package size={24} className="text-muted" />
         )}
       </div>
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          {product.exchangeEnabled ? (
-            <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-              style={{ background: 'rgba(16,185,129,0.15)', color: '#34D399' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#34D399' }} />
-              Exchange
-            </span>
-          ) : (
-            <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-              style={{ background: 'rgba(245,158,11,0.15)', color: '#FCD34D' }}
-            >
-              <Lock size={10} />
-              Locked
-            </span>
-          )}
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <h3 className="text-sm font-bold text-text truncate mb-0.5">
+          {product.phoneType || 'Unnamed Product'}
+        </h3>
+        
+        <div className="flex items-center gap-1.5 mb-1.5">
+           <p className="text-[10px] font-black text-muted uppercase tracking-wider">
+             {product.type === 'phone' ? `${product.storage || ''} · ${product.condition || ''}` : 'Accessory'}
+           </p>
+           {product.exchangeEnabled && (
+             <span className="w-1 h-1 rounded-full bg-primary" />
+           )}
+           {product.exchangeEnabled && (
+             <span className="text-[9px] font-bold text-primary uppercase">Trade-in</span>
+           )}
         </div>
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{phoneType}</p>
-        {storage && (
-          <p className="text-xs" style={{ color: 'var(--muted)' }}>{storage}</p>
-        )}
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-sm font-bold" style={{ color: 'var(--primary)' }}>{priceLabel}</span>
-          <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={stockStyle}
-          >
-            {stockQuantity === 0 ? 'Out' : `${stockQuantity} left`}
-          </span>
+
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-black text-text">
+            {product.price.toLocaleString()} <span className="text-[9px] font-bold opacity-60">ETB</span>
+          </p>
+          
+          <div className="flex items-center gap-1">
+            {isOutOfStock ? (
+              <span className="text-[10px] font-bold text-red-500 uppercase">Out of Stock</span>
+            ) : isLowStock ? (
+              <span className="text-[10px] font-bold text-primary uppercase">{product.stockQuantity} Low Stock</span>
+            ) : (
+              <span className="text-[10px] font-bold text-muted uppercase">{product.stockQuantity} in stock</span>
+            )}
+          </div>
         </div>
       </div>
     </button>
