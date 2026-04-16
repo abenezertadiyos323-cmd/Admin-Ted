@@ -1,7 +1,3 @@
-// convex/favorites.ts
-// Customer favorites — shared via the MASTER deployment.
-// All handlers return safe defaults on missing/invalid input and never throw.
-
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 

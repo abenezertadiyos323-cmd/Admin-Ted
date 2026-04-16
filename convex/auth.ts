@@ -87,7 +87,7 @@ async function hmacSha256(
   return new Uint8Array(signature);
 }
 
-export async function verifyInitData(initData: string, botToken: string): Promise<TelegramUser> {
+async function verifyInitData(initData: string, botToken: string): Promise<TelegramUser> {
   const params = new URLSearchParams(initData);
   const hash = params.get("hash");
   const authDateRaw = params.get("auth_date");
