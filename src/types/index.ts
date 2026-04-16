@@ -44,20 +44,31 @@ export interface Admin {
   addedBy?: string;
 }
 
-// ---- Product ----
+export interface Variant {
+  storage: string;
+  ram?: string;
+  price: number;
+  stock: number;
+}
 
 export interface Product {
   _id: string;
   type: ProductType;
   phoneType: string;
+  brand?: string;
   ram?: string;
   storage?: string;
+  storageOptions?: string[];
   condition?: Condition;
   price: number;
   stockQuantity: number;
   exchangeEnabled: boolean;
   description?: string;
   images: ProductImage[];
+  batteryHealth?: string;
+  modelOrigin?: string;
+  network?: string;
+  variants?: Variant[];
   screenSize?: string;
   battery?: string;
   mainCamera?: string;
