@@ -14,6 +14,8 @@ import Settings from "./pages/Settings";
 import SettingsAccess from "./pages/SettingsAccess";
 import SettingsBackend from "./pages/SettingsBackend";
 
+import AuthGuard from "./components/AuthGuard";
+
 export default function App() {
   useEffect(() => {
     initTelegram();
@@ -22,8 +24,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Routes>
-        <Route element={<Layout />}>
+      <AuthGuard>
+        <Routes>
+          <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/inventory/add" element={<ProductForm />} />
@@ -36,7 +39,8 @@ export default function App() {
           <Route path="/settings/access" element={<SettingsAccess />} />
           <Route path="/settings/backend" element={<SettingsBackend />} />
         </Route>
-      </Routes>
+        </Routes>
+      </AuthGuard>
     </BrowserRouter>
   );
 }

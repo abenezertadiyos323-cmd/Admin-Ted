@@ -16,6 +16,10 @@ export function getTelegramUser() {
   };
 }
 
+export function getTelegramInitData() {
+  return tg?.initData || "";
+}
+
 export function initTelegram() {
   if (tg) {
     tg.ready();
